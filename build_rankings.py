@@ -67,6 +67,10 @@ POST_STATUS_NAMES = {"大会終了", "記録未登録", "記録確定"}
 RESULT_CLASS_CODES = {0, 3}
 
 
+def log(message):
+    print(message, flush=True)
+
+
 def normalize_status(raw_status_name):
     if raw_status_name in PRE_STATUS_NAMES:
         return "競技前"
@@ -96,6 +100,10 @@ def api_get(path, params=None, retries=4):
         url += "?" + urllib.parse.urlencode(params, doseq=True)
     headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
     for attempt in range(retries):
+        if attempt == 0:
+            log(f"  GET {path}")
+        else:
+            log(f"  RETRY {attempt + 1}/{retries} {path}")
         request = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=10) as response:
@@ -105,8 +113,10 @@ def api_get(path, params=None, retries=4):
                 time.sleep(1.5 * (attempt + 1))
                 continue
             body = error.read().decode("utf-8", errors="ignore")
+            log(f"  HTTP ERROR {error.code} {path}")
             raise RuntimeError(f"HTTP {error.code} for {url}: {body[:300]}")
         except (TimeoutError, socket.timeout, OSError):
+            log(f"  TIMEOUT/NETWORK ERROR {path}")
             if attempt < retries - 1:
                 time.sleep(1.5 * (attempt + 1))
                 continue
@@ -130,19 +140,23 @@ def enrich_tournaments(existing_tournaments=None):
     existing_map = {item["code"]: item for item in (existing_tournaments or [])}
     enriched = []
     for tournament in TOURNAMENTS:
+        log(f"[status] {tournament['prefecture']} {tournament['code']}")
         raw_status = ""
         status = ""
         try:
             detail = api_get(f"/games/{tournament['code']}")
             raw_status = (detail.get("game_status") or {}).get("name", "")
             status = normalize_status(raw_status)
+            log(f"  status={status} raw={raw_status}")
         except Exception:
             cached = existing_map.get(tournament["code"])
             if cached:
                 raw_status = cached.get("statusRaw", "")
                 status = cached.get("status", "") or normalize_status(raw_status)
+                log(f"  fallback cached status={status} raw={raw_status}")
             else:
                 status, raw_status = fallback_status_from_dates(tournament["date"])
+                log(f"  fallback date-based status={status} raw={raw_status}")
         enriched.append(
             {
                 **tournament,
@@ -234,6 +248,7 @@ def collect_event_specs(game_code):
     try:
         races = api_get(f"/games/{game_code}/races")["data"]
     except Exception:
+        log(f"  no races for {game_code}")
         return []
     specs = {}
     for race_day in races:
@@ -263,10 +278,22 @@ def collect_event_specs(game_code):
                                 "class": class_meta,
                                 "division": division_meta,
                             }
+    log(f"  collected {len(specs)} event specs for {game_code}")
     return list(specs.values())
 
 
 def fetch_results_for_event(game_code, spec):
+    event_name = event_label(
+        spec["gender"]["name"],
+        spec["style"]["name"],
+        spec["distance"]["name"],
+        spec["distance"].get("name_for_relay"),
+    )
+    log(
+        "  fetching "
+        f"{game_code} {event_name} "
+        f"class={spec['class']['code']} division={spec['division']['code']}"
+    )
     path = (
         f"/games/{game_code}/results/genders/{spec['gender']['code']}"
         f"/swimming_styles/{spec['style']['code']}"
@@ -276,8 +303,11 @@ def fetch_results_for_event(game_code, spec):
         f"/heats/100"
     )
     try:
-        return api_get(path)["data"]
+        rows = api_get(path)["data"]
+        log(f"    results={len(rows)} via heat=100")
+        return rows
     except Exception:
+        log(f"    fallback heats lookup for {game_code} {event_name}")
         heats_path = (
             f"/games/{game_code}/heats/genders/{spec['gender']['code']}"
             f"/swimming_styles/{spec['style']['code']}"
@@ -287,6 +317,7 @@ def fetch_results_for_event(game_code, spec):
         try:
             heat_info = api_get(heats_path)["data"]
         except Exception:
+            log(f"    heats lookup failed for {game_code} {event_name}")
             return []
         target_heat = None
         for division in heat_info:
@@ -296,11 +327,15 @@ def fetch_results_for_event(game_code, spec):
                     target_heat = heats[0]
                     break
         if target_heat is None:
+            log(f"    no matching heat for {game_code} {event_name}")
             return []
         fallback_path = path.rsplit("/", 1)[0] + f"/{target_heat}"
         try:
-            return api_get(fallback_path)["data"]
+            rows = api_get(fallback_path)["data"]
+            log(f"    results={len(rows)} via heat={target_heat}")
+            return rows
         except Exception:
+            log(f"    fallback result fetch failed for {game_code} {event_name}")
             return []
 
 
@@ -314,9 +349,11 @@ def build_dataset(existing_data=None):
     tournaments_done = 0
     for tournament in tournaments:
         tournaments_done += 1
-        print(f"[{tournaments_done}/{len(TOURNAMENTS)}] {tournament['prefecture']} {tournament['code']}")
+        log(f"[{tournaments_done}/{len(TOURNAMENTS)}] {tournament['prefecture']} {tournament['code']}")
         specs = collect_event_specs(tournament["code"])
         tournament_best = {}
+        if not specs:
+            log(f"  no specs for {tournament['code']}, using cached rows if available")
         for spec in specs:
             rows = fetch_results_for_event(tournament["code"], spec)
             label = event_label(
@@ -371,6 +408,10 @@ def build_dataset(existing_data=None):
                     -(current["finaPoint"] or 0),
                 ):
                     tournament_best[dedupe_key] = payload
+        log(
+            f"  tournament {tournament['code']} best rows={len(tournament_best)} "
+            f"cached rows={len(existing_rows_by_tournament.get(tournament['code'], []))}"
+        )
         source_rows = list(tournament_best.values()) or existing_rows_by_tournament.get(tournament["code"], [])
         for payload in source_rows:
             global_key = payload["name"] + "|" + payload["school"]
@@ -429,9 +470,9 @@ def main():
         "window.SWIM_RANKING_DATA = " + json.dumps(dataset, ensure_ascii=False) + ";\n",
         encoding="utf-8",
     )
-    print(f"Wrote {OUTPUT_PATH}")
-    print(f"Events: {len(dataset['events'])}")
-    print(f"Rows: {len(dataset['rows'])}")
+    log(f"Wrote {OUTPUT_PATH}")
+    log(f"Events: {len(dataset['events'])}")
+    log(f"Rows: {len(dataset['rows'])}")
 
 
 if __name__ == "__main__":
