@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import socket
+import subprocess
 import time
 import urllib.error
 import urllib.parse
@@ -118,6 +119,90 @@ def load_existing_dataset():
         return None
 
 
+def load_dataset_from_text(text):
+    prefix = "window.SWIM_RANKING_DATA = "
+    if not text.startswith(prefix):
+        return None
+    try:
+        return json.loads(text[len(prefix):].rstrip(";\n"))
+    except json.JSONDecodeError:
+        return None
+
+
+def load_historical_datasets(limit=8):
+    try:
+        result = subprocess.run(
+            ["git", "log", f"-n{limit}", "--format=%H", "--", "ranking-data.js"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except Exception:
+        return []
+    commits = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    datasets = []
+    for commit in commits:
+        try:
+            content = subprocess.run(
+                ["git", "show", f"{commit}:ranking-data.js"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+        except Exception:
+            continue
+        dataset = load_dataset_from_text(content)
+        if dataset:
+            datasets.append(dataset)
+    return datasets
+
+
+def merge_existing_datasets(datasets):
+    candidates = [dataset for dataset in datasets if dataset]
+    if not candidates:
+        return None
+
+    merged_tournaments = {}
+    merged_rows = {}
+    best_meta = max(candidates, key=lambda item: (len(item.get("rows", [])), len(item.get("events", []))))
+
+    for dataset in candidates:
+        tournament_map = {item["code"]: item for item in dataset.get("tournaments", [])}
+        rows_by_tournament = defaultdict(list)
+        for row in dataset.get("rows", []):
+            rows_by_tournament[row["tournamentCode"]].append(row)
+
+        for code, tournament in tournament_map.items():
+            current = merged_tournaments.get(code)
+            current_rows = merged_rows.get(code, [])
+            candidate_rows = rows_by_tournament.get(code, [])
+            current_complete = bool(current and current.get("fetchComplete"))
+            candidate_complete = bool(tournament.get("fetchComplete"))
+
+            take_candidate = False
+            if current is None:
+                take_candidate = True
+            elif candidate_complete and not current_complete:
+                take_candidate = True
+            elif len(candidate_rows) > len(current_rows):
+                take_candidate = True
+            elif candidate_complete == current_complete and tournament.get("fetchSucceededSpecCount", 0) > current.get("fetchSucceededSpecCount", 0):
+                take_candidate = True
+
+            if take_candidate:
+                merged_tournaments[code] = tournament
+                merged_rows[code] = candidate_rows
+
+    merged = {
+        "generatedAt": best_meta.get("generatedAt"),
+        "source": best_meta.get("source"),
+        "tournaments": list(merged_tournaments.values()),
+        "rows": [row for code in sorted(merged_rows) for row in merged_rows[code]],
+        "events": best_meta.get("events", []),
+    }
+    return merged
+
+
 def api_get(path, params=None, retries=4):
     url = f"{API_BASE}{path}"
     if params:
@@ -204,7 +289,7 @@ def should_fetch_tournament(tournament, existing_map):
     cached = existing_map.get(tournament["code"], {})
     if tournament.get("status") == "競技前":
         return False, "status-pre"
-    if raw_status == "記録確定":
+    if raw_status == "記録確定" and (cached.get("fetchComplete") or cached):
         return False, "status-record-fixed"
     if raw_status != "大会終了":
         return False, f"status-{raw_status or 'unknown'}"
@@ -413,17 +498,21 @@ def build_dataset(existing_data=None):
         tournament["fetchAttemptedSpecCount"] = 0
         tournament["fetchSucceededSpecCount"] = 0
         tournament["fetchFailedSpecCount"] = 0
-        tournament["fetchComplete"] = False
+        tournament["fetchComplete"] = existing_tournament_map.get(tournament["code"], {}).get("fetchComplete", False)
 
         if not specs:
             log(f"  no specs for {tournament['code']}, using cached rows if available")
             tournament["fetchComplete"] = bool(cached_rows)
         elif not fetch_needed:
             log(f"  skip fetch for {tournament['code']} reason={fetch_reason}")
-            tournament["fetchAttemptedSpecCount"] = len(specs) if tournament["fetchComplete"] else 0
-            tournament["fetchSucceededSpecCount"] = len(specs) if tournament["fetchComplete"] else 0
-            tournament["fetchFailedSpecCount"] = 0 if tournament["fetchComplete"] else len(specs)
-            tournament["fetchComplete"] = existing_tournament_map.get(tournament["code"], {}).get("fetchComplete", False)
+            if tournament["fetchComplete"]:
+                tournament["fetchAttemptedSpecCount"] = len(specs)
+                tournament["fetchSucceededSpecCount"] = len(specs)
+                tournament["fetchFailedSpecCount"] = 0
+            elif cached_rows:
+                tournament["fetchAttemptedSpecCount"] = 0
+                tournament["fetchSucceededSpecCount"] = 0
+                tournament["fetchFailedSpecCount"] = 0
 
         for spec in specs if fetch_needed else []:
             tournament["fetchAttemptedSpecCount"] += 1
@@ -559,7 +648,8 @@ def build_dataset(existing_data=None):
 
 
 def main():
-    dataset = build_dataset(load_existing_dataset())
+    existing_dataset = merge_existing_datasets([load_existing_dataset(), *load_historical_datasets()])
+    dataset = build_dataset(existing_dataset)
     OUTPUT_PATH.write_text(
         "window.SWIM_RANKING_DATA = " + json.dumps(dataset, ensure_ascii=False) + ";\n",
         encoding="utf-8",
