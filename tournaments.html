@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>高校総体予選 2026 大会一覧</title>
+  <style>
+    :root {
+      --bg: #eef3f1;
+      --panel: rgba(255,255,255,0.94);
+      --ink: #16212a;
+      --muted: #64727d;
+      --line: rgba(22,33,42,0.12);
+      --accent: #0f7a6c;
+      --warn: #d67a17;
+      --done: #3964d1;
+      --shadow: 0 18px 50px rgba(22,33,42,0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15,122,108,0.12), transparent 26%),
+        radial-gradient(circle at top right, rgba(214,122,23,0.12), transparent 22%),
+        linear-gradient(180deg, #f8fbfa 0%, var(--bg) 100%);
+    }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 28px 18px 44px; }
+    .hero, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero { padding: 28px; margin-bottom: 18px; }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 5vw, 52px);
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+    }
+    .subtitle { margin: 0; color: var(--muted); line-height: 1.7; max-width: 920px; }
+    .nav { margin-top: 18px; }
+    .nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+      margin-right: 16px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+    .stat {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px 18px;
+    }
+    .stat b { display:block; font-size: 28px; margin-bottom: 4px; }
+    .panel { padding: 18px; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font: inherit;
+      background: white;
+    }
+    .table-wrap {
+      overflow: auto;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th {
+      background: #f4faf8;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    tbody tr:hover { background: #f7fcfa; }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+    }
+    .status-pre { background: rgba(214,122,23,0.12); color: var(--warn); }
+    .status-live { background: rgba(15,122,108,0.12); color: var(--accent); }
+    .status-done { background: rgba(57,100,209,0.12); color: var(--done); }
+    .small { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    a { color: var(--accent); }
+    .footer { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 16px; }
+    @media (max-width: 900px) {
+      .stats, .toolbar { grid-template-columns: 1fr; }
+      .wrap { padding: 16px 12px 28px; }
+      .hero, .panel { border-radius: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>高校総体予選 2026 大会一覧</h1>
+      <p class="subtitle">都道府県ごとの対象大会名と大会ページへのリンク、2026年6月16日時点のステータスを一覧表示しています。</p>
+      <div class="nav">
+        <a href="./index.html">トップへ</a>
+        <a href="./rankings.html">結合ランキングへ</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="stat-total">-</b><span>対象大会</span></div>
+        <div class="stat"><b id="stat-pre">-</b><span>競技前</span></div>
+        <div class="stat"><b id="stat-live">-</b><span>競技中</span></div>
+        <div class="stat"><b id="stat-done">-</b><span>競技終了</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div>
+          <label for="search-input">検索</label>
+          <input id="search-input" type="search" placeholder="都道府県名・大会名・会場名で検索">
+        </div>
+        <div>
+          <label for="status-filter">ステータス</label>
+          <select id="status-filter">
+            <option value="">すべて</option>
+            <option value="競技前">競技前</option>
+            <option value="競技中">競技中</option>
+            <option value="競技終了">競技終了</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>都道府県</th>
+              <th>大会名</th>
+              <th>日程</th>
+              <th>会場</th>
+              <th>ステータス</th>
+            </tr>
+          </thead>
+          <tbody id="tournament-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="footer">
+      <p>生成日時: <span id="generated-at"></span></p>
+      <p>ステータスは result.swim.or.jp の生ステータスを `競技前 / 競技中 / 競技終了` に正規化して表示しています。</p>
+    </section>
+  </div>
+
+  <script src="./ranking-data.js"></script>
+  <script>
+    const data = window.SWIM_RANKING_DATA;
+    const body = document.getElementById("tournament-body");
+    const searchInput = document.getElementById("search-input");
+    const statusFilter = document.getElementById("status-filter");
+
+    document.getElementById("generated-at").textContent = data.generatedAt;
+    document.getElementById("stat-total").textContent = data.tournaments.length;
+    document.getElementById("stat-pre").textContent = data.statusSummary["競技前"];
+    document.getElementById("stat-live").textContent = data.statusSummary["競技中"];
+    document.getElementById("stat-done").textContent = data.statusSummary["競技終了"];
+
+    function badgeClass(status) {
+      if (status === "競技前") return "status-pre";
+      if (status === "競技中") return "status-live";
+      return "status-done";
+    }
+
+    function render() {
+      const query = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+      const rows = data.tournaments.filter(item => {
+        if (status && item.status !== status) return false;
+        if (!query) return true;
+        return [item.prefecture, item.name, item.venue].some(value =>
+          value.toLowerCase().includes(query)
+        );
+      });
+
+      body.innerHTML = "";
+      for (const item of rows) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.prefecture}</td>
+          <td><a href="${item.url}" target="_blank" rel="noreferrer">${item.name}</a></td>
+          <td>${item.date}</td>
+          <td>${item.venue}</td>
+          <td>
+            <span class="badge ${badgeClass(item.status)}">${item.status}</span>
+            <div class="small">元ステータス: ${item.statusRaw || "不明"}</div>
+          </td>
+        `;
+        body.appendChild(tr);
+      }
+    }
+
+    searchInput.addEventListener("input", render);
+    statusFilter.addEventListener("change", render);
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>高校総体予選 結合ランキング 2026</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --panel: rgba(255, 252, 246, 0.92);
+      --ink: #13212d;
+      --muted: #637180;
+      --line: rgba(19, 33, 45, 0.12);
+      --accent: #006f8f;
+      --shadow: 0 18px 50px rgba(19, 33, 45, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(230,108,76,0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(0,111,143,0.18), transparent 24%),
+        linear-gradient(180deg, #fcf8f2 0%, var(--bg) 100%);
+    }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 32px 20px 48px; }
+    .hero, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .hero { padding: 28px; margin-bottom: 20px; }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 5vw, 52px);
+      line-height: 1.03;
+      letter-spacing: -0.03em;
+    }
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 900px;
+      line-height: 1.7;
+    }
+    .nav { margin-top: 18px; }
+    .nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+      margin-right: 16px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+    }
+    .stat {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: white;
+      border: 1px solid var(--line);
+    }
+    .stat b {
+      display: block;
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+    .panel { padding: 20px; margin-bottom: 20px; }
+    .controls {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 14px;
+      align-items: end;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font: inherit;
+      background: white;
+      color: var(--ink);
+    }
+    .event-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      color: var(--muted);
+    }
+    .table-wrap {
+      overflow: auto;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 950px; }
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #fbf5eb;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    tbody tr:hover { background: #fff8ef; }
+    .rank { font-weight: 800; color: var(--accent); }
+    .time { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    a { color: var(--accent); }
+    .footer { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    @media (max-width: 900px) {
+      .stats, .controls { grid-template-columns: 1fr; }
+      .wrap { padding: 18px 14px 28px; }
+      .hero, .panel { border-radius: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>高校総体予選 2026 結合ランキング</h1>
+      <p class="subtitle">
+        47都道府県の高校総体予選相当大会を横断し、同一種目ごとに記録順で並べた一覧です。
+        同一大会内で予選と決勝がある場合は、その選手・チームの最速記録だけを採用しています。
+      </p>
+      <div class="nav">
+        <a href="./index.html">トップへ</a>
+        <a href="./tournaments.html">大会一覧へ</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="stat-tournaments">-</b><span>対象大会</span></div>
+        <div class="stat"><b id="stat-events">-</b><span>種目</span></div>
+        <div class="stat"><b id="stat-rows">-</b><span>掲載記録</span></div>
+        <div class="stat"><b id="stat-live">-</b><span>結果公開済み大会</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="controls">
+        <div>
+          <label for="event-select">種目</label>
+          <select id="event-select"></select>
+        </div>
+        <div>
+          <label for="search-input">選手・学校検索</label>
+          <input id="search-input" type="search" placeholder="例: 佐藤 / 西京 / 金沢">
+        </div>
+        <div>
+          <label for="prefecture-select">都道府県</label>
+          <select id="prefecture-select">
+            <option value="">すべて</option>
+          </select>
+        </div>
+      </div>
+      <div class="event-meta">
+        <div id="event-summary"></div>
+        <div id="event-best"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>順位</th>
+              <th>記録</th>
+              <th>名前 / チーム名</th>
+              <th>学校</th>
+              <th>学年</th>
+              <th>都道府県</th>
+              <th>区分</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="footer">
+      <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。生成日時: <span id="generated-at"></span></p>
+      <p>このページは、種目詳細まで公開されている大会だけを結合しています。未開催大会や、結果未登録の大会は自動的に空になります。</p>
+      <p>注記: 高知大会はサイト上の大会名に 2025年表記が含まれますが、開催日データは 2026-06-13〜2026-06-14 を採用しています。</p>
+    </section>
+  </div>
+
+  <script src="./ranking-data.js"></script>
+  <script>
+    const data = window.SWIM_RANKING_DATA;
+    const eventSelect = document.getElementById("event-select");
+    const searchInput = document.getElementById("search-input");
+    const prefectureSelect = document.getElementById("prefecture-select");
+    const rankingBody = document.getElementById("ranking-body");
+    const eventSummary = document.getElementById("event-summary");
+    const eventBest = document.getElementById("event-best");
+
+    document.getElementById("stat-tournaments").textContent = data.tournaments.length;
+    document.getElementById("stat-events").textContent = data.events.length;
+    document.getElementById("stat-rows").textContent = data.rows.length.toLocaleString("ja-JP");
+    document.getElementById("generated-at").textContent = data.generatedAt;
+    document.getElementById("stat-live").textContent = new Set(data.rows.map(item => item.tournamentCode)).size;
+
+    for (const event of data.events) {
+      const option = document.createElement("option");
+      option.value = event.eventKey;
+      option.textContent = event.eventLabel;
+      eventSelect.appendChild(option);
+    }
+
+    const prefectures = [...new Set(data.tournaments.map(item => item.prefecture))];
+    for (const prefecture of prefectures) {
+      const option = document.createElement("option");
+      option.value = prefecture;
+      option.textContent = prefecture;
+      prefectureSelect.appendChild(option);
+    }
+
+    function render() {
+      const eventKey = eventSelect.value || data.events[0]?.eventKey;
+      const query = searchInput.value.trim().toLowerCase();
+      const prefecture = prefectureSelect.value;
+      const event = data.events.find(item => item.eventKey === eventKey);
+      let rows = data.rows.filter(item => item.eventKey === eventKey);
+      if (prefecture) {
+        rows = rows.filter(item => item.prefecture === prefecture);
+      }
+      if (query) {
+        rows = rows.filter(item =>
+          item.name.toLowerCase().includes(query) ||
+          item.school.toLowerCase().includes(query) ||
+          item.relayMembers.toLowerCase().includes(query)
+        );
+      }
+
+      eventSummary.textContent = event
+        ? `${event.eventLabel} / ${rows.length}件表示 / 全体 ${event.entryCount}件`
+        : "";
+      eventBest.textContent = event ? `全体トップ: ${event.bestTime}` : "";
+
+      rankingBody.innerHTML = "";
+      for (const row of rows) {
+        const subline = row.relayMembers ? `(${row.relayMembers})` : "";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="rank">${row.rank}</td>
+          <td class="time">${row.time}</td>
+          <td>
+            <div>${row.name}</div>
+            <div class="small">${subline}</div>
+          </td>
+          <td>${row.school || "-"}</td>
+          <td>${row.schoolGrade || "-"}</td>
+          <td><a href="${row.tournamentUrl}" target="_blank" rel="noreferrer">${row.prefecture}</a></td>
+          <td>${row.divisionName}</td>
+        `;
+        rankingBody.appendChild(tr);
+      }
+    }
+
+    eventSelect.addEventListener("change", render);
+    searchInput.addEventListener("input", render);
+    prefectureSelect.addEventListener("change", render);
+    render();
+  </script>
+</body>
+</html>
