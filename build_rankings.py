@@ -65,6 +65,15 @@ PRE_STATUS_NAMES = {"開催前", "エントリー済"}
 LIVE_STATUS_NAMES = {"開催中"}
 POST_STATUS_NAMES = {"大会終了", "記録未登録", "記録確定"}
 RESULT_CLASS_CODES = {0, 3}
+TARGET_STYLE_DISTANCES = {
+    1: {2, 3, 4, 5, 6, 7},  # 自由形
+    2: {3, 4},              # 背泳ぎ
+    3: {3, 4},              # 平泳ぎ
+    4: {3, 4},              # バタフライ
+    5: {4, 5},              # 個人メドレー
+    6: {5, 6},              # フリーリレー
+    7: {5},                 # メドレーリレー
+}
 
 
 def log(message):
@@ -79,6 +88,21 @@ def normalize_status(raw_status_name):
     if raw_status_name in POST_STATUS_NAMES:
         return "競技終了"
     return raw_status_name or "不明"
+
+
+def is_short_course_name(waterway_name):
+    return waterway_name == "短水路"
+
+
+def is_target_event(gender_code, style_code, distance_code):
+    allowed_distances = TARGET_STYLE_DISTANCES.get(style_code)
+    if not allowed_distances or distance_code not in allowed_distances:
+        return False
+    if style_code == 1 and gender_code == 1 and distance_code == 6:
+        return False
+    if style_code == 1 and gender_code == 2 and distance_code == 7:
+        return False
+    return True
 
 
 def load_existing_dataset():
@@ -143,16 +167,22 @@ def enrich_tournaments(existing_tournaments=None):
         log(f"[status] {tournament['prefecture']} {tournament['code']}")
         raw_status = ""
         status = ""
+        waterway_name = ""
+        is_short_course = False
         try:
             detail = api_get(f"/games/{tournament['code']}")
             raw_status = (detail.get("game_status") or {}).get("name", "")
             status = normalize_status(raw_status)
+            waterway_name = (detail.get("waterway") or {}).get("name", "")
+            is_short_course = is_short_course_name(waterway_name)
             log(f"  status={status} raw={raw_status}")
         except Exception:
             cached = existing_map.get(tournament["code"])
             if cached:
                 raw_status = cached.get("statusRaw", "")
                 status = cached.get("status", "") or normalize_status(raw_status)
+                waterway_name = cached.get("waterwayName", "")
+                is_short_course = cached.get("isShortCourse", False)
                 log(f"  fallback cached status={status} raw={raw_status}")
             else:
                 status, raw_status = fallback_status_from_dates(tournament["date"])
@@ -162,9 +192,25 @@ def enrich_tournaments(existing_tournaments=None):
                 **tournament,
                 "statusRaw": raw_status,
                 "status": status,
+                "waterwayName": waterway_name,
+                "isShortCourse": is_short_course,
             }
         )
     return enriched
+
+
+def should_fetch_tournament(tournament, existing_map):
+    raw_status = tournament.get("statusRaw", "")
+    cached = existing_map.get(tournament["code"], {})
+    if tournament.get("status") == "競技前":
+        return False, "status-pre"
+    if raw_status == "記録確定":
+        return False, "status-record-fixed"
+    if raw_status != "大会終了":
+        return False, f"status-{raw_status or 'unknown'}"
+    if cached.get("fetchComplete"):
+        return False, "already-complete"
+    return True, "fetch-needed"
 
 
 def parse_time_to_centis(value):
@@ -258,6 +304,8 @@ def collect_event_specs(game_code):
                 style = held_style["swimming_style"]
                 for held_distance in held_style.get("held_distances", []):
                     distance = held_distance["distance"]
+                    if not is_target_event(gender["code"], style["code"], distance["code"]):
+                        continue
                     for class_info in held_distance.get("classes", []):
                         class_meta = class_info["class"]
                         if class_meta["code"] not in RESULT_CLASS_CODES:
@@ -305,7 +353,7 @@ def fetch_results_for_event(game_code, spec):
     try:
         rows = api_get(path)["data"]
         log(f"    results={len(rows)} via heat=100")
-        return rows
+        return rows, True
     except Exception:
         log(f"    fallback heats lookup for {game_code} {event_name}")
         heats_path = (
@@ -318,7 +366,7 @@ def fetch_results_for_event(game_code, spec):
             heat_info = api_get(heats_path)["data"]
         except Exception:
             log(f"    heats lookup failed for {game_code} {event_name}")
-            return []
+            return [], False
         target_heat = None
         for division in heat_info:
             if division["division"]["code"] == spec["division"]["code"]:
@@ -328,19 +376,20 @@ def fetch_results_for_event(game_code, spec):
                     break
         if target_heat is None:
             log(f"    no matching heat for {game_code} {event_name}")
-            return []
+            return [], False
         fallback_path = path.rsplit("/", 1)[0] + f"/{target_heat}"
         try:
             rows = api_get(fallback_path)["data"]
             log(f"    results={len(rows)} via heat={target_heat}")
-            return rows
+            return rows, True
         except Exception:
             log(f"    fallback result fetch failed for {game_code} {event_name}")
-            return []
+            return [], False
 
 
 def build_dataset(existing_data=None):
     tournaments = enrich_tournaments((existing_data or {}).get("tournaments"))
+    existing_tournament_map = {item["code"]: item for item in (existing_data or {}).get("tournaments", [])}
     existing_rows_by_tournament = defaultdict(list)
     if existing_data:
         for row in existing_data.get("rows", []):
@@ -352,10 +401,37 @@ def build_dataset(existing_data=None):
         log(f"[{tournaments_done}/{len(TOURNAMENTS)}] {tournament['prefecture']} {tournament['code']}")
         specs = collect_event_specs(tournament["code"])
         tournament_best = {}
+        cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
+        for payload in cached_rows:
+            dedupe_key = (payload["eventKey"], payload["name"] + "|" + payload["school"])
+            tournament_best[dedupe_key] = payload
+
+        fetch_needed, fetch_reason = should_fetch_tournament(tournament, existing_tournament_map)
+        tournament["fetchReason"] = fetch_reason
+        tournament["fetchUpdatedAt"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        tournament["targetSpecCount"] = len(specs)
+        tournament["fetchAttemptedSpecCount"] = 0
+        tournament["fetchSucceededSpecCount"] = 0
+        tournament["fetchFailedSpecCount"] = 0
+        tournament["fetchComplete"] = False
+
         if not specs:
             log(f"  no specs for {tournament['code']}, using cached rows if available")
-        for spec in specs:
-            rows = fetch_results_for_event(tournament["code"], spec)
+            tournament["fetchComplete"] = bool(cached_rows)
+        elif not fetch_needed:
+            log(f"  skip fetch for {tournament['code']} reason={fetch_reason}")
+            tournament["fetchAttemptedSpecCount"] = len(specs) if tournament["fetchComplete"] else 0
+            tournament["fetchSucceededSpecCount"] = len(specs) if tournament["fetchComplete"] else 0
+            tournament["fetchFailedSpecCount"] = 0 if tournament["fetchComplete"] else len(specs)
+            tournament["fetchComplete"] = existing_tournament_map.get(tournament["code"], {}).get("fetchComplete", False)
+
+        for spec in specs if fetch_needed else []:
+            tournament["fetchAttemptedSpecCount"] += 1
+            rows, success = fetch_results_for_event(tournament["code"], spec)
+            if success:
+                tournament["fetchSucceededSpecCount"] += 1
+            else:
+                tournament["fetchFailedSpecCount"] += 1
             label = event_label(
                 spec["gender"]["name"],
                 spec["style"]["name"],
@@ -398,6 +474,8 @@ def build_dataset(existing_data=None):
                     "tournamentDate": tournament["date"],
                     "venue": tournament["venue"],
                     "tournamentUrl": tournament["url"],
+                    "waterwayName": tournament.get("waterwayName", ""),
+                    "isShortCourse": tournament.get("isShortCourse", False),
                     "divisionName": spec["division"]["name"],
                     "resultId": row.get("result_id"),
                     "finaPoint": row.get("fina_point"),
@@ -408,11 +486,22 @@ def build_dataset(existing_data=None):
                     -(current["finaPoint"] or 0),
                 ):
                     tournament_best[dedupe_key] = payload
+
+        if fetch_needed:
+            tournament["fetchComplete"] = (
+                tournament["targetSpecCount"] > 0
+                and tournament["fetchSucceededSpecCount"] == tournament["targetSpecCount"]
+                and tournament["fetchFailedSpecCount"] == 0
+            )
         log(
             f"  tournament {tournament['code']} best rows={len(tournament_best)} "
-            f"cached rows={len(existing_rows_by_tournament.get(tournament['code'], []))}"
+            f"cached rows={len(cached_rows)} "
+            f"attempted={tournament['fetchAttemptedSpecCount']} "
+            f"succeeded={tournament['fetchSucceededSpecCount']} "
+            f"failed={tournament['fetchFailedSpecCount']} "
+            f"complete={tournament['fetchComplete']}"
         )
-        source_rows = list(tournament_best.values()) or existing_rows_by_tournament.get(tournament["code"], [])
+        source_rows = list(tournament_best.values()) or cached_rows
         for payload in source_rows:
             global_key = payload["name"] + "|" + payload["school"]
             existing = event_rows[payload["eventKey"]].get(global_key)
@@ -460,6 +549,11 @@ def build_dataset(existing_data=None):
             "競技前": sum(1 for item in tournaments if item["status"] == "競技前"),
             "競技中": sum(1 for item in tournaments if item["status"] == "競技中"),
             "競技終了": sum(1 for item in tournaments if item["status"] == "競技終了"),
+        },
+        "fetchSummary": {
+            "complete": sum(1 for item in tournaments if item.get("fetchComplete")),
+            "incomplete": sum(1 for item in tournaments if item.get("targetSpecCount", 0) > 0 and not item.get("fetchComplete")),
+            "skipped": sum(1 for item in tournaments if item.get("fetchAttemptedSpecCount", 0) == 0),
         },
     }
 

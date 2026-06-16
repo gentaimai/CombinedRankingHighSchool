@@ -266,7 +266,7 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td class="rank">${row.rank}</td>
-          <td class="time">${row.time}</td>
+          <td class="time">${row.time}${row.isShortCourse ? " (S)" : ""}</td>
           <td>
             <div>${row.name}</div>
             <div class="small">${subline}</div>

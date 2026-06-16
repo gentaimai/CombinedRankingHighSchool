@@ -220,7 +220,7 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${item.prefecture}</td>
-          <td><a href="${item.url}" target="_blank" rel="noreferrer">${item.name}</a></td>
+          <td><a href="${item.url}" target="_blank" rel="noreferrer">${item.name}${item.isShortCourse ? " [短水路]" : ""}</a></td>
           <td>${item.date}</td>
           <td>${item.venue}</td>
           <td>
