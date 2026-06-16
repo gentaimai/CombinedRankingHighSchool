@@ -151,6 +151,7 @@ function buildStandings(genderKey) {
 function renderStandingsPage() {
   const genderKey = document.body.dataset.gender === "women" ? "women" : "men";
   const { config, standings, scoredSchools } = buildStandings(genderKey);
+  const visibleStandings = standings.filter((item) => item.totalPoints > 0);
   const tableHead = document.getElementById("score-head");
   const tableBody = document.getElementById("score-body");
   const pageTitle = document.getElementById("page-title");
@@ -162,10 +163,12 @@ function renderStandingsPage() {
 
   pageTitle.textContent = config.label;
   pageSubtitle.textContent = "公開済みの詳細結果から学校別得点を集計した一覧です。個人種目は1-16位、リレー種目はその倍点で計算しています。";
-  statSchools.textContent = standings.length;
+  statSchools.textContent = visibleStandings.length;
   statScored.textContent = scoredSchools;
   statEvents.textContent = config.events.length;
-  statGenerated.textContent = SWIM_DATA.generatedAt.slice(5, 16);
+  if (statGenerated) {
+    statGenerated.textContent = SWIM_DATA.generatedAt;
+  }
 
   tableHead.innerHTML =
     "<tr><th>順位</th><th>学校</th><th>総合得点</th>" +
@@ -173,7 +176,7 @@ function renderStandingsPage() {
     "</tr>";
 
   tableBody.innerHTML = "";
-  for (const school of standings) {
+  for (const school of visibleStandings) {
     const tr = document.createElement("tr");
     const cells = [
       `<td class="rank">${school.rank}</td>`,

@@ -7,7 +7,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 API_BASE = "https://result.swim.or.jp/api/v1"
 OUTPUT_PATH = Path(__file__).with_name("ranking-data.js")
@@ -79,6 +81,10 @@ TARGET_STYLE_DISTANCES = {
 
 def log(message):
     print(message, flush=True)
+
+
+def current_timestamp_jst():
+    return datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S JST")
 
 
 def normalize_status(raw_status_name):
@@ -284,18 +290,16 @@ def enrich_tournaments(existing_tournaments=None):
     return enriched
 
 
-def should_fetch_tournament(tournament, existing_map):
-    raw_status = tournament.get("statusRaw", "")
+def should_fetch_tournament(tournament, existing_map, existing_rows_by_tournament):
     cached = existing_map.get(tournament["code"], {})
+    cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
     if tournament.get("status") == "競技前":
         return False, "status-pre"
-    if raw_status == "記録確定" and (cached.get("fetchComplete") or cached):
-        return False, "status-record-fixed"
-    if raw_status != "大会終了":
-        return False, f"status-{raw_status or 'unknown'}"
-    if cached.get("fetchComplete"):
+    if tournament.get("status") != "競技終了":
+        return False, f"status-{tournament.get('statusRaw') or 'unknown'}"
+    if cached.get("fetchComplete") and cached_rows:
         return False, "already-complete"
-    return True, "fetch-needed"
+    return True, "ended-incomplete"
 
 
 def parse_time_to_centis(value):
@@ -491,14 +495,19 @@ def build_dataset(existing_data=None):
             dedupe_key = (payload["eventKey"], payload["name"] + "|" + payload["school"])
             tournament_best[dedupe_key] = payload
 
-        fetch_needed, fetch_reason = should_fetch_tournament(tournament, existing_tournament_map)
+        fetch_needed, fetch_reason = should_fetch_tournament(
+            tournament,
+            existing_tournament_map,
+            existing_rows_by_tournament,
+        )
         tournament["fetchReason"] = fetch_reason
-        tournament["fetchUpdatedAt"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        tournament["fetchUpdatedAt"] = current_timestamp_jst()
         tournament["targetSpecCount"] = len(specs)
-        tournament["fetchAttemptedSpecCount"] = 0
-        tournament["fetchSucceededSpecCount"] = 0
-        tournament["fetchFailedSpecCount"] = 0
-        tournament["fetchComplete"] = existing_tournament_map.get(tournament["code"], {}).get("fetchComplete", False)
+        cached_tournament = existing_tournament_map.get(tournament["code"], {})
+        tournament["fetchAttemptedSpecCount"] = cached_tournament.get("fetchAttemptedSpecCount", 0)
+        tournament["fetchSucceededSpecCount"] = cached_tournament.get("fetchSucceededSpecCount", 0)
+        tournament["fetchFailedSpecCount"] = cached_tournament.get("fetchFailedSpecCount", 0)
+        tournament["fetchComplete"] = cached_tournament.get("fetchComplete", False)
 
         if not specs:
             log(f"  no specs for {tournament['code']}, using cached rows if available")
@@ -509,10 +518,10 @@ def build_dataset(existing_data=None):
                 tournament["fetchAttemptedSpecCount"] = len(specs)
                 tournament["fetchSucceededSpecCount"] = len(specs)
                 tournament["fetchFailedSpecCount"] = 0
-            elif cached_rows:
-                tournament["fetchAttemptedSpecCount"] = 0
-                tournament["fetchSucceededSpecCount"] = 0
-                tournament["fetchFailedSpecCount"] = 0
+        else:
+            tournament["fetchAttemptedSpecCount"] = 0
+            tournament["fetchSucceededSpecCount"] = 0
+            tournament["fetchFailedSpecCount"] = 0
 
         for spec in specs if fetch_needed else []:
             tournament["fetchAttemptedSpecCount"] += 1
@@ -591,6 +600,7 @@ def build_dataset(existing_data=None):
             f"complete={tournament['fetchComplete']}"
         )
         source_rows = list(tournament_best.values()) or cached_rows
+        tournament["resultRowCount"] = len(source_rows)
         for payload in source_rows:
             global_key = payload["name"] + "|" + payload["school"]
             existing = event_rows[payload["eventKey"]].get(global_key)
@@ -628,7 +638,7 @@ def build_dataset(existing_data=None):
     events.sort(key=lambda item: (item["genderCode"], item["styleCode"], item["distanceCode"]))
     flat_rows.sort(key=lambda item: (item["eventLabel"], item["rank"]))
     return {
-        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "generatedAt": current_timestamp_jst(),
         "source": "https://result.swim.or.jp/",
         "tournaments": tournaments,
         "events": events,

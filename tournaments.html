@@ -181,7 +181,6 @@
     </section>
 
     <section class="footer">
-      <p>生成日時: <span id="generated-at"></span></p>
       <p>ステータスは result.swim.or.jp の生ステータスを `競技前 / 競技中 / 競技終了` に正規化して表示しています。</p>
     </section>
   </div>
@@ -193,7 +192,6 @@
     const searchInput = document.getElementById("search-input");
     const statusFilter = document.getElementById("status-filter");
 
-    document.getElementById("generated-at").textContent = data.generatedAt;
     document.getElementById("stat-total").textContent = data.tournaments.length;
     document.getElementById("stat-pre").textContent = data.statusSummary["競技前"];
     document.getElementById("stat-live").textContent = data.statusSummary["競技中"];

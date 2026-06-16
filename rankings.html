@@ -202,7 +202,7 @@
     </section>
 
     <section class="footer">
-      <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。生成日時: <span id="generated-at"></span></p>
+      <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。</p>
       <p>このページは、種目詳細まで公開されている大会だけを結合しています。未開催大会や、結果未登録の大会は自動的に空になります。</p>
       <p>注記: 高知大会はサイト上の大会名に 2025年表記が含まれますが、開催日データは 2026-06-13〜2026-06-14 を採用しています。</p>
     </section>
@@ -221,7 +221,6 @@
     document.getElementById("stat-tournaments").textContent = data.tournaments.length;
     document.getElementById("stat-events").textContent = data.events.length;
     document.getElementById("stat-rows").textContent = data.rows.length.toLocaleString("ja-JP");
-    document.getElementById("generated-at").textContent = data.generatedAt;
     document.getElementById("stat-live").textContent = new Set(data.rows.map(item => item.tournamentCode)).size;
 
     for (const event of data.events) {
