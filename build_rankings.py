@@ -64,6 +64,7 @@ TOURNAMENTS = [
 PRE_STATUS_NAMES = {"開催前", "エントリー済"}
 LIVE_STATUS_NAMES = {"開催中"}
 POST_STATUS_NAMES = {"大会終了", "記録未登録", "記録確定"}
+RESULT_CLASS_CODES = {0, 3}
 
 
 def normalize_status(raw_status_name):
@@ -244,7 +245,7 @@ def collect_event_specs(game_code):
                     distance = held_distance["distance"]
                     for class_info in held_distance.get("classes", []):
                         class_meta = class_info["class"]
-                        if class_meta["code"] != 3:
+                        if class_meta["code"] not in RESULT_CLASS_CODES:
                             continue
                         for division in class_info.get("race_divisions", []):
                             division_meta = division["division"]
@@ -329,7 +330,6 @@ def build_dataset(existing_data=None):
                     str(spec["gender"]["code"]),
                     str(spec["style"]["code"]),
                     str(spec["distance"]["code"]),
-                    str(spec["class"]["code"]),
                 ]
             )
             for row in rows:
