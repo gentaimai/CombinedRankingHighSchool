@@ -492,7 +492,7 @@ def build_dataset(existing_data=None):
         tournament_best = {}
         cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
         for payload in cached_rows:
-            dedupe_key = (payload["eventKey"], payload["name"] + "|" + payload["school"])
+            dedupe_key = (payload["eventKey"], payload["name"] + "|" + payload["school"] + "|" + payload["prefecture"])
             tournament_best[dedupe_key] = payload
 
         fetch_needed, fetch_reason = should_fetch_tournament(
@@ -549,7 +549,7 @@ def build_dataset(existing_data=None):
                 key = competitor_key(swimmers)
                 if centis is None or not key:
                     continue
-                dedupe_key = (event_key, key)
+                dedupe_key = (event_key, key + "|" + tournament["prefecture"])
                 payload = {
                     "eventKey": event_key,
                     "eventLabel": label,
@@ -602,7 +602,7 @@ def build_dataset(existing_data=None):
         source_rows = list(tournament_best.values()) or cached_rows
         tournament["resultRowCount"] = len(source_rows)
         for payload in source_rows:
-            global_key = payload["name"] + "|" + payload["school"]
+            global_key = payload["name"] + "|" + payload["school"] + "|" + payload["prefecture"]
             existing = event_rows[payload["eventKey"]].get(global_key)
             if existing is None or (payload["timeCentis"], -(payload["finaPoint"] or 0)) < (
                 existing["timeCentis"],

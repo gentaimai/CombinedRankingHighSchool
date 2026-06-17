@@ -62,6 +62,10 @@ function formatPoints(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+function schoolKey(row) {
+  return [row.school, row.prefecture || ""].join("|");
+}
+
 function normalizeSchoolLabel(rows) {
   const bySchool = new Map();
   for (const row of rows) {
@@ -72,8 +76,10 @@ function normalizeSchoolLabel(rows) {
   }
   const labelMap = new Map();
   for (const [school, prefectures] of bySchool.entries()) {
-    const suffix = prefectures.size > 1 ? " (" + [...prefectures].sort().join("/") + ")" : "";
-    labelMap.set(school, school + suffix);
+    for (const prefecture of prefectures) {
+      const suffix = prefectures.size > 1 ? "(" + prefecture + ")" : "";
+      labelMap.set([school, prefecture || ""].join("|"), school + suffix);
+    }
   }
   return labelMap;
 }
@@ -111,15 +117,17 @@ function buildStandings(genderKey) {
       const awardedPoints = totalPoints / tieGroup.length;
 
       for (const row of tieGroup) {
-        if (!schools.has(row.school)) {
-          schools.set(row.school, {
+        const key = schoolKey(row);
+        if (!schools.has(key)) {
+          schools.set(key, {
             school: row.school,
-            displaySchool: schoolLabels.get(row.school) || row.school,
+            prefecture: row.prefecture,
+            displaySchool: schoolLabels.get(key) || row.school,
             totalPoints: 0,
             eventPoints: {},
           });
         }
-        const schoolRecord = schools.get(row.school);
+        const schoolRecord = schools.get(key);
         schoolRecord.eventPoints[eventKey] = (schoolRecord.eventPoints[eventKey] || 0) + awardedPoints;
         schoolRecord.totalPoints += awardedPoints;
       }
