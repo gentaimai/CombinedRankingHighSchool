@@ -218,12 +218,25 @@
     const eventSummary = document.getElementById("event-summary");
     const eventBest = document.getElementById("event-best");
 
+    function normalizeEventKey(eventKey) {
+      return eventKey.split("|").slice(0, 3).join("|");
+    }
+
+    const eventsByKey = new Map();
+    for (const event of data.events) {
+      const key = normalizeEventKey(event.eventKey);
+      if (!eventsByKey.has(key)) {
+        eventsByKey.set(key, { ...event, eventKey: key });
+      }
+    }
+    const events = [...eventsByKey.values()];
+
     document.getElementById("stat-tournaments").textContent = data.tournaments.length;
-    document.getElementById("stat-events").textContent = data.events.length;
+    document.getElementById("stat-events").textContent = events.length;
     document.getElementById("stat-rows").textContent = data.rows.length.toLocaleString("ja-JP");
     document.getElementById("stat-live").textContent = new Set(data.rows.map(item => item.tournamentCode)).size;
 
-    for (const event of data.events) {
+    for (const event of events) {
       const option = document.createElement("option");
       option.value = event.eventKey;
       option.textContent = event.eventLabel;
@@ -239,11 +252,11 @@
     }
 
     function render() {
-      const eventKey = eventSelect.value || data.events[0]?.eventKey;
+      const eventKey = eventSelect.value || events[0]?.eventKey;
       const query = searchInput.value.trim().toLowerCase();
       const prefecture = prefectureSelect.value;
-      const event = data.events.find(item => item.eventKey === eventKey);
-      let rows = data.rows.filter(item => item.eventKey === eventKey);
+      const event = events.find(item => item.eventKey === eventKey);
+      let rows = data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
       if (prefecture) {
         rows = rows.filter(item => item.prefecture === prefecture);
       }
@@ -256,7 +269,7 @@
       }
 
       eventSummary.textContent = event
-        ? `${event.eventLabel} / ${rows.length}件表示 / 全体 ${event.entryCount}件`
+        ? `${event.eventLabel} / ${rows.length}件表示 / 全体 ${data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey).length}件`
         : "";
       eventBest.textContent = event ? `全体トップ: ${event.bestTime}` : "";
 
