@@ -141,7 +141,21 @@
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; }
     @media (max-width: 900px) {
       .controls { grid-template-columns: 1fr; }
-      .event-meta { grid-template-columns: 1fr; }
+      .event-meta {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .line-card {
+        padding: 8px 6px;
+        text-align: center;
+      }
+      .line-card span {
+        font-size: 10px;
+        line-height: 1.25;
+        margin-bottom: 3px;
+      }
+      .line-card b { font-size: 15px; }
       .wrap { padding: 18px 14px 28px; }
       .hero, .panel { border-radius: 18px; }
       .panel { padding: 12px; }
@@ -199,9 +213,9 @@
         </div>
       </div>
       <div class="event-meta">
-        <div class="line-card"><span>表彰台ライン（3位）</span><b id="podium-line">-</b></div>
-        <div class="line-card"><span>決勝進出ライン（8位）</span><b id="final-line">-</b></div>
-        <div class="line-card"><span>B決勝進出ライン（16位）</span><b id="b-final-line">-</b></div>
+        <div class="line-card"><span>表彰台<br>3位</span><b id="podium-line">-</b></div>
+        <div class="line-card"><span>決勝<br>8位</span><b id="final-line">-</b></div>
+        <div class="line-card"><span>B決勝<br>16位</span><b id="b-final-line">-</b></div>
       </div>
     </section>
 
