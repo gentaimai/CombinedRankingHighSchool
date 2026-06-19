@@ -126,6 +126,8 @@
       text-transform: uppercase;
     }
     tbody tr:hover { background: #fff8ef; }
+    tbody tr.final-cut td { border-bottom: 3px solid #d4563f; }
+    tbody tr.b-final-cut td { border-bottom: 3px solid #0f6f8c; }
     .rank { font-weight: 800; color: var(--accent); }
     .time { font-weight: 800; font-variant-numeric: tabular-nums; }
     .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
@@ -204,6 +206,7 @@
     <section class="footer">
       <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。</p>
       <p>氏名横の（パ）はパンパシフィック選手権代表、（ジ）はジュニアパンパシフィック選手権代表を示します。</p>
+      <p>赤線は決勝進出ライン、青線はB決勝進出ラインです。個人種目では国際大会代表選手を除外してライン位置を計算しています。</p>
       <p>このページは、種目詳細まで公開されている大会だけを結合しています。未開催大会や、結果未登録の大会は自動的に空になります。</p>
       <p>注記: 高知大会はサイト上の大会名に 2025年表記が含まれますが、開催日データは 2026-06-13〜2026-06-14 を採用しています。</p>
     </section>
@@ -240,6 +243,29 @@
       return marker ? `${row.name}（${marker}）` : row.name;
     }
 
+    function isInternationalRepresentative(row) {
+      return representativeMarkers.has(normalizeRepresentativeName(row.name));
+    }
+
+    function rowIdentity(row) {
+      return [
+        normalizeEventKey(row.eventKey),
+        row.resultId || "",
+        row.name || "",
+        row.school || "",
+        row.prefecture || "",
+        row.time || "",
+      ].join("|");
+    }
+
+    function cutoffRowIds(eventRows) {
+      const ids = new Set();
+      const scoringRows = eventRows.filter((row) => row.isRelay || !isInternationalRepresentative(row));
+      if (scoringRows[7]) ids.add(rowIdentity(scoringRows[7]) + "|final");
+      if (scoringRows[15]) ids.add(rowIdentity(scoringRows[15]) + "|b-final");
+      return ids;
+    }
+
     const eventsByKey = new Map();
     for (const event of data.events) {
       const key = normalizeEventKey(event.eventKey);
@@ -274,7 +300,9 @@
       const query = searchInput.value.trim().toLowerCase();
       const prefecture = prefectureSelect.value;
       const event = events.find(item => item.eventKey === eventKey);
-      let rows = data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
+      const eventRows = data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
+      const cutoffIds = cutoffRowIds(eventRows);
+      let rows = eventRows;
       if (prefecture) {
         rows = rows.filter(item => item.prefecture === prefecture);
       }
@@ -295,6 +323,13 @@
       for (const row of rows) {
         const subline = row.relayMembers ? `(${row.relayMembers})` : "";
         const tr = document.createElement("tr");
+        const identity = rowIdentity(row);
+        if (cutoffIds.has(identity + "|final")) {
+          tr.classList.add("final-cut");
+        }
+        if (cutoffIds.has(identity + "|b-final")) {
+          tr.classList.add("b-final-cut");
+        }
         tr.innerHTML = `
           <td class="rank">${row.rank}</td>
           <td class="time">${row.time}${row.isShortCourse ? " (S)" : ""}</td>
