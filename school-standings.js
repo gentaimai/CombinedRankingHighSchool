@@ -185,16 +185,12 @@ function renderStandingsPage() {
   const statSchools = document.getElementById("stat-schools");
   const statScored = document.getElementById("stat-scored");
   const statEvents = document.getElementById("stat-events");
-  const statGenerated = document.getElementById("stat-generated");
 
   pageTitle.textContent = config.label;
   pageSubtitle.textContent = "公開済みの詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。";
   statSchools.textContent = visibleStandings.length;
   statScored.textContent = scoredSchools;
   statEvents.textContent = config.events.length;
-  if (statGenerated) {
-    statGenerated.textContent = SWIM_DATA.generatedAt;
-  }
 
   tableHead.innerHTML =
     "<tr><th>順位</th><th>学校</th><th>総合得点</th>" +

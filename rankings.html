@@ -52,23 +52,6 @@
       font-weight: 700;
       margin-right: 16px;
     }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 22px;
-    }
-    .stat {
-      padding: 16px 18px;
-      border-radius: 18px;
-      background: white;
-      border: 1px solid var(--line);
-    }
-    .stat b {
-      display: block;
-      font-size: 28px;
-      margin-bottom: 4px;
-    }
     .panel { padding: 20px; margin-bottom: 20px; }
     .controls {
       display: grid;
@@ -134,7 +117,7 @@
     a { color: var(--accent); }
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; }
     @media (max-width: 900px) {
-      .stats, .controls { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr; }
       .wrap { padding: 18px 14px 28px; }
       .hero, .panel { border-radius: 18px; }
     }
@@ -149,15 +132,10 @@
         同一大会内で予選と決勝がある場合は、その選手・チームの最速記録だけを採用しています。
       </p>
       <div class="nav">
-        <a href="./index.html">男子学校対抗</a>
-        <a href="./girls.html">女子学校対抗</a>
+        <a href="./index.html">トップ</a>
+        <a href="./boys.html">男子得点</a>
+        <a href="./girls.html">女子得点</a>
         <a href="./tournaments.html">大会一覧へ</a>
-      </div>
-      <div class="stats">
-        <div class="stat"><b id="stat-tournaments">-</b><span>対象大会</span></div>
-        <div class="stat"><b id="stat-events">-</b><span>種目</span></div>
-        <div class="stat"><b id="stat-rows">-</b><span>掲載記録</span></div>
-        <div class="stat"><b id="stat-live">-</b><span>結果公開済み大会</span></div>
       </div>
     </section>
 
@@ -274,11 +252,6 @@
       }
     }
     const events = [...eventsByKey.values()];
-
-    document.getElementById("stat-tournaments").textContent = data.tournaments.length;
-    document.getElementById("stat-events").textContent = events.length;
-    document.getElementById("stat-rows").textContent = data.rows.length.toLocaleString("ja-JP");
-    document.getElementById("stat-live").textContent = new Set(data.rows.map(item => item.tournamentCode)).size;
 
     for (const event of events) {
       const option = document.createElement("option");

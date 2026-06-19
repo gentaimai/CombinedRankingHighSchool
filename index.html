@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>男子学校対抗得点 2026</title>
+  <title>高校総体予選 2026</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -12,12 +12,12 @@
       --muted: #68737d;
       --line: rgba(22,33,42,0.12);
       --accent: #0f6f8c;
-      --accent-soft: #eef7fb;
       --shadow: 0 18px 50px rgba(22,33,42,0.08);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      min-height: 100vh;
       font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
       color: var(--ink);
       background:
@@ -25,65 +25,70 @@
         radial-gradient(circle at top right, rgba(59,154,120,0.10), transparent 20%),
         linear-gradient(180deg, #f8fbfa 0%, var(--bg) 100%);
     }
-    .wrap { max-width: 1600px; margin: 0 auto; padding: 28px 18px 40px; }
-    .hero, .panel {
+    .wrap { max-width: 980px; margin: 0 auto; padding: 36px 18px 28px; }
+    .hero {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 24px;
       box-shadow: var(--shadow);
+      padding: 28px;
     }
-    .hero { padding: 26px; margin-bottom: 18px; }
-    h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 50px); line-height: 1.02; letter-spacing: -0.03em; }
-    .subtitle { margin: 0; color: var(--muted); line-height: 1.7; max-width: 900px; }
-    .nav { margin-top: 18px; }
-    .nav a { color: var(--accent); text-decoration: none; font-weight: 700; margin-right: 16px; }
-    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
-    .stat { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
-    .stat b { display: block; font-size: 28px; margin-bottom: 4px; }
-    .panel { padding: 18px; }
-    .table-wrap { overflow: auto; border-radius: 18px; border: 1px solid var(--line); background: white; }
-    table { width: 100%; border-collapse: collapse; min-width: 1500px; }
-    th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: center; font-size: 13px; }
-    th { position: sticky; top: 0; z-index: 1; background: #f3fafc; color: var(--muted); font-size: 12px; }
-    th:nth-child(2), td:nth-child(2) { text-align: left; min-width: 180px; }
-    td.total, td.rank, td.school { font-weight: 800; }
-    tbody tr:hover { background: var(--accent-soft); }
-    .footer { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 16px; }
-    @media (max-width: 900px) { .stats { grid-template-columns: 1fr 1fr; } .wrap { padding: 16px 12px 28px; } }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 5vw, 50px);
+      line-height: 1.04;
+    }
+    .subtitle { margin: 0; color: var(--muted); line-height: 1.7; }
+    .links {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .link-card {
+      display: block;
+      min-height: 112px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .link-card b { display: block; font-size: 22px; margin-bottom: 8px; }
+    .link-card span { color: var(--muted); line-height: 1.6; }
+    .link-card:hover { border-color: rgba(15,111,140,0.45); background: #f6fbfd; }
+    .updated {
+      margin: 18px 2px 0;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+    @media (max-width: 720px) {
+      .wrap { padding: 18px 12px 24px; }
+      .hero { border-radius: 18px; padding: 22px; }
+      .links { grid-template-columns: 1fr; }
+      .updated { text-align: left; }
+    }
   </style>
 </head>
-<body data-gender="men">
-  <div class="wrap">
+<body>
+  <main class="wrap">
     <section class="hero">
-      <h1 id="page-title"></h1>
-      <p id="page-subtitle" class="subtitle"></p>
-      <div class="nav">
-        <a href="./index.html">男子学校対抗</a>
-        <a href="./girls.html">女子学校対抗</a>
-        <a href="./rankings.html">個人・リレーランキング</a>
-        <a href="./tournaments.html">大会一覧</a>
-      </div>
-      <div class="stats">
-        <div class="stat"><b id="stat-schools">-</b><span>掲載学校</span></div>
-        <div class="stat"><b id="stat-scored">-</b><span>得点校</span></div>
-        <div class="stat"><b id="stat-events">-</b><span>対象種目</span></div>
-        <div class="stat"><b id="stat-generated">-</b><span>生成日時</span></div>
+      <h1>高校総体予選 2026</h1>
+      <p class="subtitle">学校対抗得点、個人・リレーの結合ランキング、大会一覧を確認できます。</p>
+      <div class="links">
+        <a class="link-card" href="./boys.html"><b>男子得点</b><span>男子学校対抗得点</span></a>
+        <a class="link-card" href="./girls.html"><b>女子得点</b><span>女子学校対抗得点</span></a>
+        <a class="link-card" href="./rankings.html"><b>結合ランキング</b><span>個人・リレー種目別ランキング</span></a>
+        <a class="link-card" href="./tournaments.html"><b>大会一覧</b><span>都道府県別の対象大会</span></a>
       </div>
     </section>
-    <section class="panel">
-      <div class="table-wrap">
-        <table>
-          <thead id="score-head"></thead>
-          <tbody id="score-body"></tbody>
-        </table>
-      </div>
-    </section>
-    <section class="footer">
-      <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。短水路記録を含む場合があります。</p>
-    </section>
-  </div>
+    <p class="updated">最新のウェブ更新日: <span id="generated-at">-</span></p>
+  </main>
   <script src="./ranking-data.js"></script>
-  <script src="./international-representatives.js"></script>
-  <script src="./school-standings.js"></script>
+  <script>
+    document.getElementById("generated-at").textContent = window.SWIM_RANKING_DATA.generatedAt;
+  </script>
 </body>
 </html>
