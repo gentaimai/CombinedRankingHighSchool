@@ -48,19 +48,6 @@
       font-weight: 700;
       margin-right: 16px;
     }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 20px;
-    }
-    .stat {
-      background: white;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px 18px;
-    }
-    .stat b { display:block; font-size: 28px; margin-bottom: 4px; }
     .panel { padding: 18px; }
     .toolbar {
       display: grid;
@@ -124,7 +111,7 @@
     a { color: var(--accent); }
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 16px; }
     @media (max-width: 900px) {
-      .stats, .toolbar { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
       .wrap { padding: 16px 12px 28px; }
       .hero, .panel { border-radius: 18px; }
     }
@@ -140,12 +127,6 @@
         <a href="./boys.html">男子得点</a>
         <a href="./girls.html">女子得点</a>
         <a href="./rankings.html">結合ランキング</a>
-      </div>
-      <div class="stats">
-        <div class="stat"><b id="stat-total">-</b><span>対象大会</span></div>
-        <div class="stat"><b id="stat-pre">-</b><span>競技前</span></div>
-        <div class="stat"><b id="stat-live">-</b><span>競技中</span></div>
-        <div class="stat"><b id="stat-done">-</b><span>競技終了</span></div>
       </div>
     </section>
 
@@ -192,11 +173,6 @@
     const body = document.getElementById("tournament-body");
     const searchInput = document.getElementById("search-input");
     const statusFilter = document.getElementById("status-filter");
-
-    document.getElementById("stat-total").textContent = data.tournaments.length;
-    document.getElementById("stat-pre").textContent = data.statusSummary["競技前"];
-    document.getElementById("stat-live").textContent = data.statusSummary["競技中"];
-    document.getElementById("stat-done").textContent = data.statusSummary["競技終了"];
 
     function badgeClass(status) {
       if (status === "競技前") return "status-pre";
