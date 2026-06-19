@@ -136,6 +136,7 @@
     th:nth-child(7), td:nth-child(7) { width: 86px; }
     .rank { font-weight: 800; color: var(--accent); }
     .time { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .course-mark { margin-left: 4px; }
     .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
     a { color: var(--accent); }
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; }
@@ -176,6 +177,13 @@
       th:nth-child(6), td:nth-child(6) { width: 44px; }
       .rank { font-size: 13px; }
       .time { font-size: 12px; }
+      .course-mark {
+        display: block;
+        margin-left: 0;
+        margin-top: 1px;
+        font-size: 10px;
+        line-height: 1;
+      }
       .small { font-size: 10px; }
     }
   </style>
@@ -371,7 +379,7 @@
         }
         tr.innerHTML = `
           <td class="rank">${row.rank}</td>
-          <td class="time">${row.time}${row.isShortCourse ? " (S)" : ""}</td>
+          <td class="time">${row.time}${row.isShortCourse ? '<span class="course-mark">(S)</span>' : ""}</td>
           <td>
             <div>${formatName(row)}</div>
             <div class="small">${subline}</div>
