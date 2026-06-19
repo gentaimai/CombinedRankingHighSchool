@@ -170,27 +170,20 @@ function buildStandings(genderKey) {
   return {
     config,
     standings,
-    scoredSchools: standings.filter((item) => item.totalPoints > 0).length,
   };
 }
 
 function renderStandingsPage() {
   const genderKey = document.body.dataset.gender === "women" ? "women" : "men";
-  const { config, standings, scoredSchools } = buildStandings(genderKey);
+  const { config, standings } = buildStandings(genderKey);
   const visibleStandings = standings.filter((item) => item.totalPoints > 0);
   const tableHead = document.getElementById("score-head");
   const tableBody = document.getElementById("score-body");
   const pageTitle = document.getElementById("page-title");
   const pageSubtitle = document.getElementById("page-subtitle");
-  const statSchools = document.getElementById("stat-schools");
-  const statScored = document.getElementById("stat-scored");
-  const statEvents = document.getElementById("stat-events");
 
   pageTitle.textContent = config.label;
   pageSubtitle.textContent = "公開済みの詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。";
-  statSchools.textContent = visibleStandings.length;
-  statScored.textContent = scoredSchools;
-  statEvents.textContent = config.events.length;
 
   tableHead.innerHTML =
     "<tr><th>順位</th><th>学校</th><th>総合得点</th>" +

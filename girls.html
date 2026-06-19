@@ -37,9 +37,6 @@
     .subtitle { margin: 0; color: var(--muted); line-height: 1.7; max-width: 900px; }
     .nav { margin-top: 18px; }
     .nav a { color: var(--accent); text-decoration: none; font-weight: 700; margin-right: 16px; }
-    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
-    .stat { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
-    .stat b { display: block; font-size: 28px; margin-bottom: 4px; }
     .panel { padding: 18px; }
     .table-wrap { overflow: auto; border-radius: 18px; border: 1px solid var(--line); background: white; }
     table { width: 100%; border-collapse: collapse; min-width: 1500px; }
@@ -49,7 +46,7 @@
     td.total, td.rank, td.school { font-weight: 800; }
     tbody tr:hover { background: var(--accent-soft); }
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 16px; }
-    @media (max-width: 900px) { .stats { grid-template-columns: 1fr 1fr; } .wrap { padding: 16px 12px 28px; } }
+    @media (max-width: 900px) { .wrap { padding: 16px 12px 28px; } }
   </style>
 </head>
 <body data-gender="women">
@@ -63,11 +60,6 @@
         <a href="./girls.html">女子得点</a>
         <a href="./rankings.html">結合ランキング</a>
         <a href="./tournaments.html">大会一覧</a>
-      </div>
-      <div class="stats">
-        <div class="stat"><b id="stat-schools">-</b><span>掲載学校</span></div>
-        <div class="stat"><b id="stat-scored">-</b><span>得点校</span></div>
-        <div class="stat"><b id="stat-events">-</b><span>対象種目</span></div>
       </div>
     </section>
     <section class="panel">
