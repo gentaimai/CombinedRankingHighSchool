@@ -77,12 +77,29 @@
       color: var(--ink);
     }
     .event-meta {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
       margin-top: 16px;
-      flex-wrap: wrap;
+    }
+    .line-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      padding: 12px 14px;
+    }
+    .line-card span {
+      display: block;
       color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .line-card b {
+      display: block;
+      color: var(--ink);
+      font-size: 20px;
+      font-variant-numeric: tabular-nums;
     }
     .table-wrap {
       overflow: auto;
@@ -124,6 +141,7 @@
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; }
     @media (max-width: 900px) {
       .controls { grid-template-columns: 1fr; }
+      .event-meta { grid-template-columns: 1fr; }
       .wrap { padding: 18px 14px 28px; }
       .hero, .panel { border-radius: 18px; }
       .panel { padding: 12px; }
@@ -181,8 +199,9 @@
         </div>
       </div>
       <div class="event-meta">
-        <div id="event-summary"></div>
-        <div id="event-best"></div>
+        <div class="line-card"><span>表彰台ライン（3位）</span><b id="podium-line">-</b></div>
+        <div class="line-card"><span>決勝進出ライン（8位）</span><b id="final-line">-</b></div>
+        <div class="line-card"><span>B決勝進出ライン（16位）</span><b id="b-final-line">-</b></div>
       </div>
     </section>
 
@@ -222,8 +241,9 @@
     const searchInput = document.getElementById("search-input");
     const prefectureSelect = document.getElementById("prefecture-select");
     const rankingBody = document.getElementById("ranking-body");
-    const eventSummary = document.getElementById("event-summary");
-    const eventBest = document.getElementById("event-best");
+    const podiumLine = document.getElementById("podium-line");
+    const finalLine = document.getElementById("final-line");
+    const bFinalLine = document.getElementById("b-final-line");
 
     function normalizeEventKey(eventKey) {
       return eventKey.split("|").slice(0, 3).join("|");
@@ -268,6 +288,14 @@
       return ids;
     }
 
+    function scoringRowsForEvent(eventRows) {
+      return eventRows.filter((row) => row.isRelay || !isInternationalRepresentative(row));
+    }
+
+    function lineTime(scoringRows, index) {
+      return scoringRows[index] ? scoringRows[index].time : "-";
+    }
+
     const eventsByKey = new Map();
     for (const event of data.events) {
       const key = normalizeEventKey(event.eventKey);
@@ -296,9 +324,9 @@
       const eventKey = eventSelect.value || events[0]?.eventKey;
       const query = searchInput.value.trim().toLowerCase();
       const prefecture = prefectureSelect.value;
-      const event = events.find(item => item.eventKey === eventKey);
       const eventRows = data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
       const cutoffIds = cutoffRowIds(eventRows);
+      const scoringRows = scoringRowsForEvent(eventRows);
       let rows = eventRows;
       if (prefecture) {
         rows = rows.filter(item => item.prefecture === prefecture);
@@ -311,10 +339,9 @@
         );
       }
 
-      eventSummary.textContent = event
-        ? `${event.eventLabel} / ${rows.length}件表示 / 全体 ${data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey).length}件`
-        : "";
-      eventBest.textContent = event ? `全体トップ: ${event.bestTime}` : "";
+      podiumLine.textContent = lineTime(scoringRows, 2);
+      finalLine.textContent = lineTime(scoringRows, 7);
+      bFinalLine.textContent = lineTime(scoringRows, 15);
 
       rankingBody.innerHTML = "";
       for (const row of rows) {
