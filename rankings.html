@@ -90,13 +90,14 @@
       border: 1px solid var(--line);
       background: white;
     }
-    table { width: 100%; border-collapse: collapse; min-width: 950px; }
+    table { width: 100%; border-collapse: collapse; min-width: 950px; table-layout: fixed; }
     th, td {
       padding: 13px 14px;
       border-bottom: 1px solid var(--line);
       text-align: left;
       vertical-align: top;
       font-size: 14px;
+      overflow-wrap: anywhere;
     }
     th {
       position: sticky;
@@ -111,8 +112,13 @@
     tbody tr:hover { background: #fff8ef; }
     tbody tr.final-cut td { border-bottom: 3px solid #d4563f; }
     tbody tr.b-final-cut td { border-bottom: 3px solid #0f6f8c; }
+    th:nth-child(1), td:nth-child(1) { width: 56px; text-align: center; }
+    th:nth-child(2), td:nth-child(2) { width: 90px; }
+    th:nth-child(5), td:nth-child(5) { width: 64px; }
+    th:nth-child(6), td:nth-child(6) { width: 82px; }
+    th:nth-child(7), td:nth-child(7) { width: 86px; }
     .rank { font-weight: 800; color: var(--accent); }
-    .time { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .time { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
     a { color: var(--accent); }
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; }
@@ -120,6 +126,24 @@
       .controls { grid-template-columns: 1fr; }
       .wrap { padding: 18px 14px 28px; }
       .hero, .panel { border-radius: 18px; }
+      .panel { padding: 12px; }
+      .table-wrap { border-radius: 12px; }
+      table { min-width: 0; table-layout: fixed; }
+      th, td {
+        padding: 10px 6px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      th { font-size: 10px; letter-spacing: 0; }
+      th:nth-child(1), td:nth-child(1) { width: 38px; padding-left: 4px; padding-right: 4px; }
+      th:nth-child(2), td:nth-child(2) { width: 58px; padding-left: 4px; padding-right: 4px; }
+      th:nth-child(3), td:nth-child(3) { width: 33%; }
+      th:nth-child(4), td:nth-child(4) { width: 31%; }
+      th:nth-child(5), td:nth-child(5),
+      th:nth-child(7), td:nth-child(7) { display: none; }
+      th:nth-child(6), td:nth-child(6) { width: 48px; }
+      .rank, .time { font-size: 13px; }
+      .small { font-size: 10px; }
     }
   </style>
 </head>
