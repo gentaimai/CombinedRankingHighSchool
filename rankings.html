@@ -203,12 +203,14 @@
 
     <section class="footer">
       <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。</p>
+      <p>氏名横の（パ）はパンパシフィック選手権代表、（ジ）はジュニアパンパシフィック選手権代表を示します。</p>
       <p>このページは、種目詳細まで公開されている大会だけを結合しています。未開催大会や、結果未登録の大会は自動的に空になります。</p>
       <p>注記: 高知大会はサイト上の大会名に 2025年表記が含まれますが、開催日データは 2026-06-13〜2026-06-14 を採用しています。</p>
     </section>
   </div>
 
   <script src="./ranking-data.js"></script>
+  <script src="./international-representatives.js"></script>
   <script>
     const data = window.SWIM_RANKING_DATA;
     const eventSelect = document.getElementById("event-select");
@@ -220,6 +222,22 @@
 
     function normalizeEventKey(eventKey) {
       return eventKey.split("|").slice(0, 3).join("|");
+    }
+
+    function normalizeRepresentativeName(name) {
+      return String(name || "").replace(/\s+/g, "");
+    }
+
+    const representativeMarkers = new Map(
+      (window.SWIM_INTERNATIONAL_REPRESENTATIVES || []).map((item) => [
+        normalizeRepresentativeName(item.name),
+        item.marker,
+      ])
+    );
+
+    function formatName(row) {
+      const marker = representativeMarkers.get(normalizeRepresentativeName(row.name));
+      return marker ? `${row.name}（${marker}）` : row.name;
     }
 
     const eventsByKey = new Map();
@@ -281,7 +299,7 @@
           <td class="rank">${row.rank}</td>
           <td class="time">${row.time}${row.isShortCourse ? " (S)" : ""}</td>
           <td>
-            <div>${row.name}</div>
+            <div>${formatName(row)}</div>
             <div class="small">${subline}</div>
           </td>
           <td>${row.school || "-"}</td>

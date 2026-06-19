@@ -57,6 +57,21 @@ function normalizeEventKey(eventKey) {
   return eventKey.split("|").slice(0, 3).join("|");
 }
 
+function normalizeRepresentativeName(name) {
+  return String(name || "").replace(/\s+/g, "");
+}
+
+const REPRESENTATIVE_MARKERS = new Map(
+  (window.SWIM_INTERNATIONAL_REPRESENTATIVES || []).map((item) => [
+    normalizeRepresentativeName(item.name),
+    item.marker,
+  ])
+);
+
+function isInternationalRepresentative(row) {
+  return REPRESENTATIVE_MARKERS.has(normalizeRepresentativeName(row.name));
+}
+
 function formatPoints(value) {
   if (!value) return "-";
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -98,14 +113,17 @@ function buildStandings(genderKey) {
       .filter((row) => normalizeEventKey(row.eventKey) === eventKey)
       .slice()
       .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"));
+    const scoringRows = eventRows[0]?.isRelay
+      ? eventRows
+      : eventRows.filter((row) => !isInternationalRepresentative(row));
 
     let position = 1;
     let index = 0;
-    while (index < eventRows.length) {
-      const tieGroup = [eventRows[index]];
+    while (index < scoringRows.length) {
+      const tieGroup = [scoringRows[index]];
       let nextIndex = index + 1;
-      while (nextIndex < eventRows.length && eventRows[nextIndex].timeCentis === eventRows[index].timeCentis) {
-        tieGroup.push(eventRows[nextIndex]);
+      while (nextIndex < scoringRows.length && scoringRows[nextIndex].timeCentis === scoringRows[index].timeCentis) {
+        tieGroup.push(scoringRows[nextIndex]);
         nextIndex += 1;
       }
 
@@ -170,7 +188,7 @@ function renderStandingsPage() {
   const statGenerated = document.getElementById("stat-generated");
 
   pageTitle.textContent = config.label;
-  pageSubtitle.textContent = "公開済みの詳細結果から学校別得点を集計した一覧です。個人種目は1-16位、リレー種目はその倍点で計算しています。";
+  pageSubtitle.textContent = "公開済みの詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。";
   statSchools.textContent = visibleStandings.length;
   statScored.textContent = scoredSchools;
   statEvents.textContent = config.events.length;
