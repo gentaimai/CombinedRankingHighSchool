@@ -48,6 +48,12 @@ jobs:
             exit 0
           fi
 
+          if ! grep -q '"allRows"' ranking-data.js; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Data refresh required because ranking-data.js does not include allRows"
+            exit 0
+          fi
+
           before="${{ github.event.before }}"
           if [[ "$before" =~ ^0+$ ]]; then
             echo "needed=true" >> "$GITHUB_OUTPUT"

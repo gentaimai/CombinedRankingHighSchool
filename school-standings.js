@@ -123,7 +123,7 @@ function buildStandings(genderKey, blockName = "") {
       .filter((row) => normalizeEventKey(row.eventKey) === eventKey)
       .slice()
       .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"));
-    const scoringRows = eventRows[0]?.isRelay
+    const scoringRows = blockName || eventRows[0]?.isRelay
       ? eventRows
       : eventRows.filter((row) => !isInternationalRepresentative(row));
 
@@ -195,7 +195,9 @@ function renderStandingsPage() {
   const pageSubtitle = document.getElementById("page-subtitle");
 
   pageTitle.textContent = config.label;
-  pageSubtitle.textContent = `${blockName || "全国"}の公開済み詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。`;
+  pageSubtitle.textContent = blockName
+    ? `${blockName}の公開済み詳細結果から学校別得点を集計した一覧です。ブロック表示では国際大会代表選手も個人種目の得点対象に含めています。リレー種目は順位通り、その倍点で計算しています。`
+    : "全国の公開済み詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。";
 
   tableHead.innerHTML =
     "<tr><th>順位</th><th>学校</th><th>総合得点</th>" +

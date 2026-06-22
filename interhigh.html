@@ -40,7 +40,7 @@
     .panel { padding: 18px; margin-bottom: 18px; }
     .controls {
       display: grid;
-      grid-template-columns: 1fr 1.6fr 1fr;
+      grid-template-columns: 1fr 2fr;
       gap: 14px;
       align-items: end;
     }
@@ -68,7 +68,7 @@
       border: 1px solid var(--line);
       background: white;
     }
-    table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
     th, td {
       padding: 13px 14px;
       border-bottom: 1px solid var(--line);
@@ -89,6 +89,24 @@
     .rank, .time { font-weight: 800; font-variant-numeric: tabular-nums; }
     .rank { color: var(--accent); text-align: center; }
     .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .events-cell { padding: 8px 10px; }
+    .events-scroll { overflow-x: auto; max-width: 100%; }
+    .event-list {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(96px, 1fr));
+      gap: 6px;
+      min-width: 520px;
+    }
+    .event-pill {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 9px;
+      background: #fbfdfe;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
     a { color: var(--accent); }
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 16px; }
     @media (max-width: 900px) {
@@ -101,10 +119,15 @@
       th, td { padding: 10px 6px; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
       th { font-size: 10px; letter-spacing: 0; }
       th:nth-child(1), td:nth-child(1) { width: 34px; }
-      th:nth-child(2), td:nth-child(2) { width: 24%; }
-      th:nth-child(3), td:nth-child(3) { width: 30%; }
-      th:nth-child(4), td:nth-child(4) { width: 46px; }
-      th:nth-child(n+7), td:nth-child(n+7) { display: none; }
+      th:nth-child(2), td:nth-child(2) { width: 23%; }
+      th:nth-child(3), td:nth-child(3) { width: 24%; }
+      th:nth-child(4), td:nth-child(4) { width: 34px; text-align: center; }
+      th:nth-child(5), td:nth-child(5) { width: 34px; text-align: center; }
+      th:nth-child(6), td:nth-child(6) { width: 44px; }
+      th:nth-child(7), td:nth-child(7) { width: auto; }
+      .events-cell { padding: 6px; }
+      .event-list { grid-template-columns: repeat(5, 86px); min-width: 450px; }
+      .event-pill { min-height: 32px; padding: 6px; font-size: 11px; }
       .small { font-size: 10px; }
     }
   </style>
@@ -130,12 +153,8 @@
           <select id="block-select"></select>
         </div>
         <div>
-          <label for="event-select">種目</label>
-          <select id="event-select"></select>
-        </div>
-        <div>
           <label for="search-input">検索</label>
-          <input id="search-input" type="search" placeholder="選手・学校・都道府県">
+          <input id="search-input" type="search" placeholder="選手・学校・都道府県・種目">
         </div>
       </div>
       <div id="summary" class="summary"></div>
@@ -148,13 +167,11 @@
             <tr>
               <th>No.</th>
               <th>名前</th>
-              <th>学校(学年)</th>
+              <th>学校</th>
+              <th>学年</th>
+              <th>性別</th>
               <th>都道府県</th>
-              <th>種目1</th>
-              <th>種目2</th>
-              <th>種目3</th>
-              <th>種目4</th>
-              <th>種目5</th>
+              <th>出場種目</th>
             </tr>
           </thead>
           <tbody id="qualifier-body"></tbody>
@@ -177,7 +194,6 @@
     const blocks = window.INTERHIGH_BLOCKS;
     const standardTimes = window.INTERHIGH_STANDARD_TIMES;
     const blockSelect = document.getElementById("block-select");
-    const eventSelect = document.getElementById("event-select");
     const searchInput = document.getElementById("search-input");
     const summary = document.getElementById("summary");
     const body = document.getElementById("qualifier-body");
@@ -238,10 +254,6 @@
       ].join("|");
     }
 
-    function schoolGradeLabel(school, grade) {
-      return grade && grade !== "-" ? `${school}(${grade})` : school;
-    }
-
     function relayMembers(row) {
       if (Array.isArray(row.relayMemberDetails) && row.relayMemberDetails.length) {
         return row.relayMemberDetails;
@@ -255,6 +267,22 @@
 
     function eventSortKey(row) {
       return eventOrders.get(normalizeEventKey(row.eventKey)) ?? 999;
+    }
+
+    function shortEventLabel(label) {
+      return String(label || "")
+        .replace(/^(男子|女子)\s+/, "")
+        .replace("フリーリレー", "FR")
+        .replace("メドレーリレー", "MR")
+        .replace("個人メドレー", "IM")
+        .replace("バタフライ", "Fly")
+        .replace("平泳ぎ", "Br")
+        .replace("背泳ぎ", "Ba")
+        .replace("自由形", "Fr");
+    }
+
+    function genderLabel(row) {
+      return row.genderCode === 1 || row.genderName === "男子" ? "男" : "女";
     }
 
     function buildQualifyingRows(blockName) {
@@ -304,13 +332,14 @@
     function buildParticipants(blockName) {
       const participants = new Map();
 
-      function ensureParticipant(name, school, grade, prefecture) {
+      function ensureParticipant(name, school, grade, gender, prefecture) {
         const key = normalizeName(name);
         if (!participants.has(key)) {
           participants.set(key, {
             name,
             school,
             schoolGrade: grade || "-",
+            gender,
             prefecture,
             events: new Map(),
           });
@@ -325,12 +354,12 @@
       for (const row of buildQualifyingRows(blockName)) {
         const members = row.isRelay ? relayMembers(row) : [{ name: row.name, schoolGrade: row.schoolGrade }];
         for (const member of members) {
-          const participant = ensureParticipant(member.name, row.school, member.schoolGrade, row.prefecture);
+          const participant = ensureParticipant(member.name, row.school, member.schoolGrade, genderLabel(row), row.prefecture);
           const eventKey = normalizeEventKey(row.eventKey);
           if (!participant.events.has(eventKey)) {
             participant.events.set(eventKey, {
               key: eventKey,
-              label: row.eventLabel,
+              label: shortEventLabel(row.eventLabel),
               sortKey: eventSortKey(row),
             });
           }
@@ -357,29 +386,10 @@
       blockSelect.appendChild(option);
     }
 
-    const eventsByKey = new Map();
-    for (const event of data.events) {
-      eventsByKey.set(normalizeEventKey(event.eventKey), event);
-    }
-    const allOption = document.createElement("option");
-    allOption.value = "";
-    allOption.textContent = "すべて";
-    eventSelect.appendChild(allOption);
-    for (const event of [...eventsByKey.values()].sort((left, right) => left.genderCode - right.genderCode || left.styleCode - right.styleCode || left.distanceCode - right.distanceCode)) {
-      const option = document.createElement("option");
-      option.value = normalizeEventKey(event.eventKey);
-      option.textContent = event.eventLabel;
-      eventSelect.appendChild(option);
-    }
-
     function render() {
       const blockName = blockSelect.value || blocks[0].name;
-      const eventKey = eventSelect.value;
       const query = searchInput.value.trim().toLowerCase();
       let rows = buildParticipants(blockName);
-      if (eventKey) {
-        rows = rows.filter((row) => row.eventList.some((event) => event.key === eventKey));
-      }
       if (query) {
         rows = rows.filter((row) =>
           [row.name, row.school, row.prefecture, ...row.eventList.map((event) => event.label)].some((value) =>
@@ -388,7 +398,7 @@
         );
       }
 
-      summary.textContent = `${blockName} / ${eventKey ? eventsByKey.get(eventKey)?.eventLabel : "全種目"} / ${rows.length}件`;
+      summary.textContent = `${blockName} / ${rows.length}件`;
       body.innerHTML = "";
       rows.forEach((row, index) => {
         const tr = document.createElement("tr");
@@ -396,16 +406,23 @@
         tr.innerHTML = `
           <td class="rank">${index + 1}</td>
           <td>${formatName(row)}</td>
-          <td>${schoolGradeLabel(row.school || "-", row.schoolGrade)}</td>
+          <td>${row.school || "-"}</td>
+          <td>${row.schoolGrade || "-"}</td>
+          <td>${row.gender || "-"}</td>
           <td>${row.prefecture}</td>
-          ${Array.from({ length: 5 }, (_, eventIndex) => `<td>${events[eventIndex]?.label || ""}</td>`).join("")}
+          <td class="events-cell">
+            <div class="events-scroll">
+              <div class="event-list">
+                ${Array.from({ length: 5 }, (_, eventIndex) => `<div class="event-pill">${events[eventIndex]?.label || ""}</div>`).join("")}
+              </div>
+            </div>
+          </td>
         `;
         body.appendChild(tr);
       });
     }
 
     blockSelect.addEventListener("change", render);
-    eventSelect.addEventListener("change", render);
     searchInput.addEventListener("input", render);
     render();
   </script>

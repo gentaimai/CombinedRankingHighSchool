@@ -257,7 +257,7 @@
     <section class="footer">
       <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。</p>
       <p>氏名横の（パ）はパンパシフィック選手権代表、（ジ）はジュニアパンパシフィック選手権代表を示します。</p>
-      <p>赤線は決勝進出ライン、青線はB決勝進出ラインです。個人種目では国際大会代表選手を除外してライン位置を計算しています。</p>
+      <p>赤線は決勝進出ライン、青線はB決勝進出ラインです。全国表示の個人種目では国際大会代表選手を除外してライン位置を計算し、ブロック表示では代表選手も含めて計算しています。</p>
       <p>このページは、種目詳細まで公開されている大会だけを結合しています。未開催大会や、結果未登録の大会は自動的に空になります。</p>
       <p>注記: 高知大会はサイト上の大会名に 2025年表記が含まれますが、開催日データは 2026-06-13〜2026-06-14 を採用しています。</p>
     </section>
@@ -382,15 +382,16 @@
       return keys;
     }
 
-    function cutoffRowIds(eventRows) {
+    function cutoffRowIds(eventRows, includeRepresentatives = false) {
       const ids = new Set();
-      const scoringRows = eventRows.filter((row) => row.isRelay || !isInternationalRepresentative(row));
+      const scoringRows = scoringRowsForEvent(eventRows, includeRepresentatives);
       if (scoringRows[7]) ids.add(rowIdentity(scoringRows[7]) + "|final");
       if (scoringRows[15]) ids.add(rowIdentity(scoringRows[15]) + "|b-final");
       return ids;
     }
 
-    function scoringRowsForEvent(eventRows) {
+    function scoringRowsForEvent(eventRows, includeRepresentatives = false) {
+      if (includeRepresentatives) return eventRows;
       return eventRows.filter((row) => row.isRelay || !isInternationalRepresentative(row));
     }
 
@@ -439,8 +440,9 @@
       if (blockName) {
         eventRows = eventRows.filter(item => blockSet.has(item.prefecture));
       }
-      const cutoffIds = cutoffRowIds(eventRows);
-      const scoringRows = scoringRowsForEvent(eventRows);
+      const includeRepresentatives = Boolean(blockName);
+      const cutoffIds = cutoffRowIds(eventRows, includeRepresentatives);
+      const scoringRows = scoringRowsForEvent(eventRows, includeRepresentatives);
       let rows = eventRows;
       if (qualifyingKeys) {
         rows = rows.filter(item => qualifyingKeys.has(qualifierKey(item)));
