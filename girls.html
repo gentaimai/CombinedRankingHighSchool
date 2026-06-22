@@ -38,6 +38,9 @@
     .nav { margin-top: 18px; }
     .nav a { color: var(--accent); text-decoration: none; font-weight: 700; margin-right: 16px; }
     .panel { padding: 18px; }
+    .controls { max-width: 280px; margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+    select { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; font: inherit; background: white; color: var(--ink); }
     .table-wrap { overflow: auto; border-radius: 18px; border: 1px solid var(--line); background: white; }
     table { width: 100%; border-collapse: collapse; min-width: 1500px; }
     th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: center; font-size: 13px; }
@@ -64,6 +67,12 @@
       </div>
     </section>
     <section class="panel">
+      <div class="controls">
+        <label for="block-select">ブロック</label>
+        <select id="block-select">
+          <option value="">全国</option>
+        </select>
+      </div>
       <div class="table-wrap">
         <table>
           <thead id="score-head"></thead>
@@ -77,6 +86,7 @@
   </div>
   <script src="./ranking-data.js"></script>
   <script src="./international-representatives.js"></script>
+  <script src="./interhigh-standards.js"></script>
   <script src="./school-standings.js"></script>
 </body>
 </html>

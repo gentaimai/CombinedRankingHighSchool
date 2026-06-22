@@ -396,6 +396,22 @@ def relay_members_label(swimmers):
     return " / ".join(member.get("swimmer_name", "") for member in team_members if member.get("swimmer_name"))
 
 
+def relay_member_details(swimmers):
+    details = []
+    for member in swimmers.get("team_members") or []:
+        name = member.get("swimmer_name")
+        if not name:
+            continue
+        school_class = member.get("school_class") or {}
+        grades = school_class.get("school_grade") or []
+        grade = grades[0] if grades else ""
+        details.append({
+            "name": name,
+            "schoolGrade": f"{grade}年" if grade else "-",
+        })
+    return details
+
+
 def collect_event_specs(game_code):
     try:
         races = api_get(f"/games/{game_code}/races")["data"]
@@ -595,6 +611,7 @@ def build_dataset(existing_data=None):
                     "school": school_name(swimmers),
                     "schoolGrade": school_grade_label(swimmers),
                     "relayMembers": relay_members_label(swimmers),
+                    "relayMemberDetails": relay_member_details(swimmers),
                     "prefecture": tournament["prefecture"],
                     "tournamentCode": tournament["code"],
                     "tournamentName": tournament["name"],

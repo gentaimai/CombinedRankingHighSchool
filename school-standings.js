@@ -99,11 +99,21 @@ function normalizeSchoolLabel(rows) {
   return labelMap;
 }
 
-function buildStandings(genderKey) {
+function blockPrefectures(blockName) {
+  const block = (window.INTERHIGH_BLOCKS || []).find((item) => item.name === blockName);
+  return new Set(block ? block.prefectures : []);
+}
+
+function buildStandings(genderKey, blockName = "") {
   const config = EVENT_CONFIG[genderKey];
   const allowedEventKeys = new Set(config.events.map(([key]) => key));
+  const prefectures = blockPrefectures(blockName);
   const genderRows = SWIM_DATA.rows.filter(
-    (row) => row.genderCode === config.code && allowedEventKeys.has(normalizeEventKey(row.eventKey)) && row.school
+    (row) =>
+      row.genderCode === config.code &&
+      allowedEventKeys.has(normalizeEventKey(row.eventKey)) &&
+      row.school &&
+      (!blockName || prefectures.has(row.prefecture))
   );
   const schoolLabels = normalizeSchoolLabel(genderRows);
   const schools = new Map();
@@ -175,7 +185,9 @@ function buildStandings(genderKey) {
 
 function renderStandingsPage() {
   const genderKey = document.body.dataset.gender === "women" ? "women" : "men";
-  const { config, standings } = buildStandings(genderKey);
+  const blockSelect = document.getElementById("block-select");
+  const blockName = blockSelect?.value || "";
+  const { config, standings } = buildStandings(genderKey, blockName);
   const visibleStandings = standings.filter((item) => item.totalPoints > 0);
   const tableHead = document.getElementById("score-head");
   const tableBody = document.getElementById("score-body");
@@ -183,7 +195,7 @@ function renderStandingsPage() {
   const pageSubtitle = document.getElementById("page-subtitle");
 
   pageTitle.textContent = config.label;
-  pageSubtitle.textContent = "公開済みの詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。";
+  pageSubtitle.textContent = `${blockName || "全国"}の公開済み詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。`;
 
   tableHead.innerHTML =
     "<tr><th>順位</th><th>学校</th><th>総合得点</th>" +
@@ -204,4 +216,16 @@ function renderStandingsPage() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", renderStandingsPage);
+document.addEventListener("DOMContentLoaded", () => {
+  const blockSelect = document.getElementById("block-select");
+  if (blockSelect) {
+    for (const block of window.INTERHIGH_BLOCKS || []) {
+      const option = document.createElement("option");
+      option.value = block.name;
+      option.textContent = block.name;
+      blockSelect.appendChild(option);
+    }
+    blockSelect.addEventListener("change", renderStandingsPage);
+  }
+  renderStandingsPage();
+});

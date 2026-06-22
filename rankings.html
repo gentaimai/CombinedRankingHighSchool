@@ -55,7 +55,7 @@
     .panel { padding: 20px; margin-bottom: 20px; }
     .controls {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
       gap: 14px;
       align-items: end;
     }
@@ -216,6 +216,12 @@
           <input id="search-input" type="search" placeholder="例: 佐藤 / 西京 / 金沢">
         </div>
         <div>
+          <label for="block-select">ブロック</label>
+          <select id="block-select">
+            <option value="">すべて</option>
+          </select>
+        </div>
+        <div>
           <label for="prefecture-select">都道府県</label>
           <select id="prefecture-select">
             <option value="">すべて</option>
@@ -259,10 +265,13 @@
 
   <script src="./ranking-data.js"></script>
   <script src="./international-representatives.js"></script>
+  <script src="./interhigh-standards.js"></script>
   <script>
     const data = window.SWIM_RANKING_DATA;
+    const allRows = data.allRows && data.allRows.length ? data.allRows : data.rows;
     const eventSelect = document.getElementById("event-select");
     const searchInput = document.getElementById("search-input");
+    const blockSelect = document.getElementById("block-select");
     const prefectureSelect = document.getElementById("prefecture-select");
     const rankingBody = document.getElementById("ranking-body");
     const podiumLine = document.getElementById("podium-line");
@@ -276,6 +285,22 @@
     function normalizeRepresentativeName(name) {
       return String(name || "").replace(/\s+/g, "");
     }
+
+    function parseTimeToCentis(value) {
+      if (!value || value === "-----") return null;
+      const parts = value.split(":");
+      if (parts.length === 1) {
+        const [seconds, centis] = parts[0].split(".");
+        return Number(seconds) * 100 + Number(centis);
+      }
+      const [minutes, rest] = parts;
+      const [seconds, centis] = rest.split(".");
+      return (Number(minutes) * 60 + Number(seconds)) * 100 + Number(centis);
+    }
+
+    const standardCentis = new Map(
+      Object.entries(window.INTERHIGH_STANDARD_TIMES || {}).map(([key, value]) => [key, parseTimeToCentis(value)])
+    );
 
     const representativeMarkers = new Map(
       (window.SWIM_INTERNATIONAL_REPRESENTATIVES || []).map((item) => [
@@ -302,6 +327,59 @@
         row.prefecture || "",
         row.time || "",
       ].join("|");
+    }
+
+    function qualifierKey(row) {
+      return [
+        normalizeEventKey(row.eventKey),
+        row.name || "",
+        row.school || "",
+        row.prefecture || "",
+      ].join("|");
+    }
+
+    function isTop8Division(row) {
+      const name = row.divisionName || "";
+      if (name.includes("タイム決勝")) return true;
+      return name.includes("決勝") && !name.includes("B");
+    }
+
+    function blockPrefectures(blockName) {
+      const block = (window.INTERHIGH_BLOCKS || []).find((item) => item.name === blockName);
+      return new Set(block ? block.prefectures : []);
+    }
+
+    function qualifyingKeysForBlock(blockName) {
+      if (!blockName) return null;
+      const prefectures = blockPrefectures(blockName);
+      const rows = allRows
+        .filter((row) => prefectures.has(row.prefecture))
+        .filter((row) => row.timeCentis != null);
+      const keys = new Set();
+
+      for (const row of rows) {
+        const standard = standardCentis.get(normalizeEventKey(row.eventKey));
+        if (standard != null && row.timeCentis <= standard) {
+          keys.add(qualifierKey(row));
+        }
+      }
+
+      const groups = new Map();
+      for (const row of rows.filter(isTop8Division)) {
+        const key = [row.tournamentCode, normalizeEventKey(row.eventKey), row.divisionName].join("|");
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+      }
+
+      for (const groupRows of groups.values()) {
+        groupRows
+          .slice()
+          .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"))
+          .slice(0, 8)
+          .forEach((row) => keys.add(qualifierKey(row)));
+      }
+
+      return keys;
     }
 
     function cutoffRowIds(eventRows) {
@@ -337,6 +415,12 @@
     }
 
     const prefectures = [...new Set(data.tournaments.map(item => item.prefecture))];
+    for (const block of window.INTERHIGH_BLOCKS || []) {
+      const option = document.createElement("option");
+      option.value = block.name;
+      option.textContent = block.name;
+      blockSelect.appendChild(option);
+    }
     for (const prefecture of prefectures) {
       const option = document.createElement("option");
       option.value = prefecture;
@@ -347,11 +431,20 @@
     function render() {
       const eventKey = eventSelect.value || events[0]?.eventKey;
       const query = searchInput.value.trim().toLowerCase();
+      const blockName = blockSelect.value;
       const prefecture = prefectureSelect.value;
-      const eventRows = data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
+      const blockSet = blockPrefectures(blockName);
+      const qualifyingKeys = qualifyingKeysForBlock(blockName);
+      let eventRows = data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
+      if (blockName) {
+        eventRows = eventRows.filter(item => blockSet.has(item.prefecture));
+      }
       const cutoffIds = cutoffRowIds(eventRows);
       const scoringRows = scoringRowsForEvent(eventRows);
       let rows = eventRows;
+      if (qualifyingKeys) {
+        rows = rows.filter(item => qualifyingKeys.has(qualifierKey(item)));
+      }
       if (prefecture) {
         rows = rows.filter(item => item.prefecture === prefecture);
       }
@@ -396,6 +489,7 @@
 
     eventSelect.addEventListener("change", render);
     searchInput.addEventListener("input", render);
+    blockSelect.addEventListener("change", render);
     prefectureSelect.addEventListener("change", render);
     render();
   </script>

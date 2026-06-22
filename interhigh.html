@@ -101,10 +101,10 @@
       th, td { padding: 10px 6px; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
       th { font-size: 10px; letter-spacing: 0; }
       th:nth-child(1), td:nth-child(1) { width: 34px; }
-      th:nth-child(2), td:nth-child(2) { width: 72px; }
-      th:nth-child(4), td:nth-child(4) { width: 74px; }
-      th:nth-child(6), td:nth-child(6) { width: 44px; }
-      th:nth-child(7), td:nth-child(7) { width: 66px; }
+      th:nth-child(2), td:nth-child(2) { width: 24%; }
+      th:nth-child(3), td:nth-child(3) { width: 30%; }
+      th:nth-child(4), td:nth-child(4) { width: 46px; }
+      th:nth-child(n+7), td:nth-child(n+7) { display: none; }
       .small { font-size: 10px; }
     }
   </style>
@@ -113,7 +113,7 @@
   <div class="wrap">
     <section class="hero">
       <h1>インターハイ予選 出場者 2026</h1>
-      <p class="subtitle">都道府県大会の予選・決勝・タイム決勝を対象に、標準記録突破または決勝/タイム決勝8位以内でブロック予選出場対象となる選手・チームを表示します。</p>
+      <p class="subtitle">都道府県大会の予選・決勝・タイム決勝を対象に、標準記録突破または決勝/タイム決勝8位以内でブロック予選出場対象となる選手を表示します。</p>
       <div class="nav">
         <a href="./index.html">トップ</a>
         <a href="./boys.html">男子得点</a>
@@ -146,13 +146,15 @@
         <table>
           <thead>
             <tr>
-              <th>順位</th>
-              <th>種目</th>
-              <th>記録</th>
-              <th>名前 / チーム名</th>
-              <th>学校</th>
+              <th>No.</th>
+              <th>名前</th>
+              <th>学校(学年)</th>
               <th>都道府県</th>
-              <th>標準記録</th>
+              <th>種目1</th>
+              <th>種目2</th>
+              <th>種目3</th>
+              <th>種目4</th>
+              <th>種目5</th>
             </tr>
           </thead>
           <tbody id="qualifier-body"></tbody>
@@ -171,7 +173,7 @@
   <script src="./interhigh-standards.js"></script>
   <script>
     const data = window.SWIM_RANKING_DATA;
-    const allRows = data.allRows || data.rows;
+    const allRows = data.allRows && data.allRows.length ? data.allRows : data.rows;
     const blocks = window.INTERHIGH_BLOCKS;
     const standardTimes = window.INTERHIGH_STANDARD_TIMES;
     const blockSelect = document.getElementById("block-select");
@@ -203,6 +205,9 @@
     const standardCentis = new Map(
       Object.entries(standardTimes).map(([key, value]) => [key, parseTimeToCentis(value)])
     );
+    const eventOrders = new Map(
+      data.events.map((event, index) => [normalizeEventKey(event.eventKey), index])
+    );
 
     const representativeMarkers = new Map(
       (window.SWIM_INTERNATIONAL_REPRESENTATIVES || []).map((item) => [
@@ -225,51 +230,51 @@
     function rowIdentity(row) {
       return [
         normalizeEventKey(row.eventKey),
+        row.resultId || "",
         row.name || "",
         row.school || "",
         row.prefecture || "",
+        row.time || "",
       ].join("|");
     }
 
-    function buildQualifiers(blockName) {
+    function schoolGradeLabel(school, grade) {
+      return grade && grade !== "-" ? `${school}(${grade})` : school;
+    }
+
+    function relayMembers(row) {
+      if (Array.isArray(row.relayMemberDetails) && row.relayMemberDetails.length) {
+        return row.relayMemberDetails;
+      }
+      return String(row.relayMembers || "")
+        .split("/")
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .map((name) => ({ name, schoolGrade: "-" }));
+    }
+
+    function eventSortKey(row) {
+      return eventOrders.get(normalizeEventKey(row.eventKey)) ?? 999;
+    }
+
+    function buildQualifyingRows(blockName) {
       const block = blocks.find((item) => item.name === blockName) || blocks[0];
       const prefectures = new Set(block.prefectures);
       const rows = allRows
         .filter((row) => prefectures.has(row.prefecture))
         .filter((row) => row.timeCentis != null);
 
-      const qualifiers = new Map();
+      const qualifyingRows = new Map();
 
-      function ensure(row) {
-        const key = rowIdentity(row);
-        if (!qualifiers.has(key)) {
-          qualifiers.set(key, {
-            eventKey: normalizeEventKey(row.eventKey),
-            eventLabel: row.eventLabel,
-            isRelay: row.isRelay,
-            name: row.name,
-            school: row.school,
-            schoolGrade: row.schoolGrade,
-            prefecture: row.prefecture,
-            tournamentUrl: row.tournamentUrl,
-            bestTime: row.time,
-            bestCentis: row.timeCentis,
-            standardTime: standardTimes[normalizeEventKey(row.eventKey)] || "-",
-          });
-        }
-        const item = qualifiers.get(key);
-        if (row.timeCentis < item.bestCentis) {
-          item.bestCentis = row.timeCentis;
-          item.bestTime = row.time;
-        }
-        return item;
+      function add(row) {
+        qualifyingRows.set(rowIdentity(row), row);
       }
 
       for (const row of rows) {
         const eventKey = normalizeEventKey(row.eventKey);
         const standard = standardCentis.get(eventKey);
         if (standard != null && row.timeCentis <= standard) {
-          ensure(row);
+          add(row);
         }
       }
 
@@ -285,15 +290,64 @@
           .slice()
           .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"))
           .slice(0, 8)
-          .forEach((row) => ensure(row));
+          .forEach(add);
       }
 
-      return [...qualifiers.values()].sort(
+      return [...qualifyingRows.values()].sort(
         (left, right) =>
           left.eventLabel.localeCompare(right.eventLabel, "ja") ||
-          left.bestCentis - right.bestCentis ||
+          left.timeCentis - right.timeCentis ||
           left.name.localeCompare(right.name, "ja")
       );
+    }
+
+    function buildParticipants(blockName) {
+      const participants = new Map();
+
+      function ensureParticipant(name, school, grade, prefecture) {
+        const key = normalizeName(name);
+        if (!participants.has(key)) {
+          participants.set(key, {
+            name,
+            school,
+            schoolGrade: grade || "-",
+            prefecture,
+            events: new Map(),
+          });
+        }
+        const participant = participants.get(key);
+        if ((!participant.schoolGrade || participant.schoolGrade === "-") && grade && grade !== "-") {
+          participant.schoolGrade = grade;
+        }
+        return participant;
+      }
+
+      for (const row of buildQualifyingRows(blockName)) {
+        const members = row.isRelay ? relayMembers(row) : [{ name: row.name, schoolGrade: row.schoolGrade }];
+        for (const member of members) {
+          const participant = ensureParticipant(member.name, row.school, member.schoolGrade, row.prefecture);
+          const eventKey = normalizeEventKey(row.eventKey);
+          if (!participant.events.has(eventKey)) {
+            participant.events.set(eventKey, {
+              key: eventKey,
+              label: row.eventLabel,
+              sortKey: eventSortKey(row),
+            });
+          }
+        }
+      }
+
+      return [...participants.values()]
+        .map((participant) => ({
+          ...participant,
+          eventList: [...participant.events.values()].sort((left, right) => left.sortKey - right.sortKey),
+        }))
+        .sort(
+          (left, right) =>
+            left.prefecture.localeCompare(right.prefecture, "ja") ||
+            left.school.localeCompare(right.school, "ja") ||
+            left.name.localeCompare(right.name, "ja")
+        );
     }
 
     for (const block of blocks) {
@@ -322,13 +376,13 @@
       const blockName = blockSelect.value || blocks[0].name;
       const eventKey = eventSelect.value;
       const query = searchInput.value.trim().toLowerCase();
-      let rows = buildQualifiers(blockName);
+      let rows = buildParticipants(blockName);
       if (eventKey) {
-        rows = rows.filter((row) => row.eventKey === eventKey);
+        rows = rows.filter((row) => row.eventList.some((event) => event.key === eventKey));
       }
       if (query) {
         rows = rows.filter((row) =>
-          [row.name, row.school, row.prefecture, row.eventLabel].some((value) =>
+          [row.name, row.school, row.prefecture, ...row.eventList.map((event) => event.label)].some((value) =>
             String(value || "").toLowerCase().includes(query)
           )
         );
@@ -338,16 +392,13 @@
       body.innerHTML = "";
       rows.forEach((row, index) => {
         const tr = document.createElement("tr");
-        const rank = eventKey ? index + 1 : "-";
-        const grade = row.schoolGrade && row.schoolGrade !== "-" ? ` / ${row.schoolGrade}` : "";
+        const events = row.eventList.slice(0, 5);
         tr.innerHTML = `
-          <td class="rank">${rank}</td>
-          <td>${row.eventLabel}</td>
-          <td class="time">${row.bestTime}</td>
-          <td>${formatName(row)}<div class="small">${row.isRelay ? "リレー" : ""}</div></td>
-          <td>${row.school || "-"}<div class="small">${grade}</div></td>
-          <td><a href="${row.tournamentUrl}" target="_blank" rel="noreferrer">${row.prefecture}</a></td>
-          <td>${row.standardTime}</td>
+          <td class="rank">${index + 1}</td>
+          <td>${formatName(row)}</td>
+          <td>${schoolGradeLabel(row.school || "-", row.schoolGrade)}</td>
+          <td>${row.prefecture}</td>
+          ${Array.from({ length: 5 }, (_, eventIndex) => `<td>${events[eventIndex]?.label || ""}</td>`).join("")}
         `;
         body.appendChild(tr);
       });
