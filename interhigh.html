@@ -308,6 +308,15 @@
       return String(grade || "-").replace(/年/g, "") || "-";
     }
 
+    function gradeValue(grade) {
+      const value = Number(gradeNumber(grade));
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function genderOrder(gender) {
+      return gender === "男" ? 0 : 1;
+    }
+
     function buildQualifyingRows(blockName) {
       const block = blocks.find((item) => item.name === blockName) || blocks[0];
       const prefectures = new Set(block.prefectures);
@@ -398,6 +407,8 @@
           (left, right) =>
             left.prefecture.localeCompare(right.prefecture, "ja") ||
             left.school.localeCompare(right.school, "ja") ||
+            genderOrder(left.gender) - genderOrder(right.gender) ||
+            gradeValue(right.schoolGrade) - gradeValue(left.schoolGrade) ||
             left.name.localeCompare(right.name, "ja")
         );
     }
