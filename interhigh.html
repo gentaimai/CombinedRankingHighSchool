@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>インターハイ予選 出場者 2026</title>
+  <style>
+    :root {
+      --bg: #eef3f1;
+      --panel: rgba(255,255,255,0.94);
+      --ink: #16212a;
+      --muted: #68737d;
+      --line: rgba(22,33,42,0.12);
+      --accent: #0f6f8c;
+      --accent-soft: #eef7fb;
+      --shadow: 0 18px 50px rgba(22,33,42,0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15,111,140,0.14), transparent 26%),
+        radial-gradient(circle at top right, rgba(59,154,120,0.10), transparent 20%),
+        linear-gradient(180deg, #f8fbfa 0%, var(--bg) 100%);
+    }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 18px 44px; }
+    .hero, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero { padding: 28px; margin-bottom: 18px; }
+    h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 52px); line-height: 1.04; }
+    .subtitle { margin: 0; color: var(--muted); line-height: 1.7; max-width: 960px; }
+    .nav { margin-top: 18px; }
+    .nav a { color: var(--accent); text-decoration: none; font-weight: 700; margin-right: 16px; }
+    .panel { padding: 18px; margin-bottom: 18px; }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr 1fr;
+      gap: 14px;
+      align-items: end;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font: inherit;
+      background: white;
+      color: var(--ink);
+    }
+    .summary { margin-top: 14px; color: var(--muted); line-height: 1.7; }
+    .table-wrap {
+      overflow: auto;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f3fafc;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+    tbody tr:hover { background: var(--accent-soft); }
+    .rank, .time { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .rank { color: var(--accent); text-align: center; }
+    .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .reason {
+      display: inline-block;
+      margin: 0 4px 4px 0;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef7fb;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    a { color: var(--accent); }
+    .footer { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 16px; }
+    @media (max-width: 900px) {
+      .wrap { padding: 16px 12px 28px; }
+      .hero, .panel { border-radius: 18px; }
+      .controls { grid-template-columns: 1fr; }
+      .panel { padding: 12px; }
+      .table-wrap { border-radius: 12px; }
+      table { min-width: 0; table-layout: fixed; }
+      th, td { padding: 10px 6px; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+      th { font-size: 10px; letter-spacing: 0; }
+      th:nth-child(1), td:nth-child(1) { width: 34px; }
+      th:nth-child(2), td:nth-child(2) { width: 72px; }
+      th:nth-child(4), td:nth-child(4) { width: 74px; }
+      th:nth-child(6), td:nth-child(6) { width: 44px; }
+      th:nth-child(7), td:nth-child(7) { width: 72px; }
+      th:nth-child(8), td:nth-child(8) { display: none; }
+      .reason { padding: 3px 6px; font-size: 10px; }
+      .small { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>インターハイ予選 出場者 2026</h1>
+      <p class="subtitle">都道府県大会の予選・決勝・タイム決勝を対象に、標準記録突破または決勝/タイム決勝8位以内でブロック予選出場対象となる選手・チームを表示します。</p>
+      <div class="nav">
+        <a href="./index.html">トップ</a>
+        <a href="./boys.html">男子得点</a>
+        <a href="./girls.html">女子得点</a>
+        <a href="./rankings.html">結合ランキング</a>
+        <a href="./tournaments.html">大会一覧</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="controls">
+        <div>
+          <label for="block-select">ブロック</label>
+          <select id="block-select"></select>
+        </div>
+        <div>
+          <label for="event-select">種目</label>
+          <select id="event-select"></select>
+        </div>
+        <div>
+          <label for="search-input">検索</label>
+          <input id="search-input" type="search" placeholder="選手・学校・都道府県">
+        </div>
+      </div>
+      <div id="summary" class="summary"></div>
+    </section>
+
+    <section class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>順位</th>
+              <th>種目</th>
+              <th>記録</th>
+              <th>名前 / チーム名</th>
+              <th>学校</th>
+              <th>都道府県</th>
+              <th>通過理由</th>
+              <th>標準記録</th>
+            </tr>
+          </thead>
+          <tbody id="qualifier-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="footer">
+      <p>標準記録は日本水泳連盟「第94回 日本高等学校選手権水泳競技大会」の標準記録を使用しています。</p>
+      <p>個人種目ではパンパシ・ジュニアパンパシ代表選手を除外しています。リレーはチーム単位で判定しています。</p>
+    </section>
+  </div>
+
+  <script src="./ranking-data.js"></script>
+  <script src="./international-representatives.js"></script>
+  <script src="./interhigh-standards.js"></script>
+  <script>
+    const data = window.SWIM_RANKING_DATA;
+    const allRows = data.allRows || data.rows;
+    const blocks = window.INTERHIGH_BLOCKS;
+    const standardTimes = window.INTERHIGH_STANDARD_TIMES;
+    const blockSelect = document.getElementById("block-select");
+    const eventSelect = document.getElementById("event-select");
+    const searchInput = document.getElementById("search-input");
+    const summary = document.getElementById("summary");
+    const body = document.getElementById("qualifier-body");
+
+    function normalizeEventKey(eventKey) {
+      return eventKey.split("|").slice(0, 3).join("|");
+    }
+
+    function normalizeName(name) {
+      return String(name || "").replace(/\s+/g, "");
+    }
+
+    function parseTimeToCentis(value) {
+      if (!value || value === "-----") return null;
+      const parts = value.split(":");
+      if (parts.length === 1) {
+        const [seconds, centis] = parts[0].split(".");
+        return Number(seconds) * 100 + Number(centis);
+      }
+      const [minutes, rest] = parts;
+      const [seconds, centis] = rest.split(".");
+      return (Number(minutes) * 60 + Number(seconds)) * 100 + Number(centis);
+    }
+
+    const standardCentis = new Map(
+      Object.entries(standardTimes).map(([key, value]) => [key, parseTimeToCentis(value)])
+    );
+
+    const representativeNames = new Set(
+      (window.SWIM_INTERNATIONAL_REPRESENTATIVES || []).map((item) => normalizeName(item.name))
+    );
+
+    function isRepresentative(row) {
+      return !row.isRelay && representativeNames.has(normalizeName(row.name));
+    }
+
+    function isTop8Division(row) {
+      const name = row.divisionName || "";
+      if (name.includes("タイム決勝")) return true;
+      return name.includes("決勝") && !name.includes("B");
+    }
+
+    function rowIdentity(row) {
+      return [
+        normalizeEventKey(row.eventKey),
+        row.name || "",
+        row.school || "",
+        row.prefecture || "",
+      ].join("|");
+    }
+
+    function buildQualifiers(blockName) {
+      const block = blocks.find((item) => item.name === blockName) || blocks[0];
+      const prefectures = new Set(block.prefectures);
+      const rows = allRows
+        .filter((row) => prefectures.has(row.prefecture))
+        .filter((row) => row.timeCentis != null)
+        .filter((row) => !isRepresentative(row));
+
+      const qualifiers = new Map();
+
+      function ensure(row) {
+        const key = rowIdentity(row);
+        if (!qualifiers.has(key)) {
+          qualifiers.set(key, {
+            eventKey: normalizeEventKey(row.eventKey),
+            eventLabel: row.eventLabel,
+            isRelay: row.isRelay,
+            name: row.name,
+            school: row.school,
+            schoolGrade: row.schoolGrade,
+            prefecture: row.prefecture,
+            tournamentUrl: row.tournamentUrl,
+            bestTime: row.time,
+            bestCentis: row.timeCentis,
+            standardTime: standardTimes[normalizeEventKey(row.eventKey)] || "-",
+            reasons: new Set(),
+          });
+        }
+        const item = qualifiers.get(key);
+        if (row.timeCentis < item.bestCentis) {
+          item.bestCentis = row.timeCentis;
+          item.bestTime = row.time;
+        }
+        return item;
+      }
+
+      for (const row of rows) {
+        const eventKey = normalizeEventKey(row.eventKey);
+        const standard = standardCentis.get(eventKey);
+        if (standard != null && row.timeCentis <= standard) {
+          ensure(row).reasons.add("標準突破");
+        }
+      }
+
+      const groups = new Map();
+      for (const row of rows.filter(isTop8Division)) {
+        const key = [row.tournamentCode, normalizeEventKey(row.eventKey), row.divisionName].join("|");
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+      }
+
+      for (const groupRows of groups.values()) {
+        groupRows
+          .slice()
+          .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"))
+          .slice(0, 8)
+          .forEach((row) => ensure(row).reasons.add("決勝8位以内"));
+      }
+
+      return [...qualifiers.values()].sort(
+        (left, right) =>
+          left.eventLabel.localeCompare(right.eventLabel, "ja") ||
+          left.bestCentis - right.bestCentis ||
+          left.name.localeCompare(right.name, "ja")
+      );
+    }
+
+    for (const block of blocks) {
+      const option = document.createElement("option");
+      option.value = block.name;
+      option.textContent = block.name;
+      blockSelect.appendChild(option);
+    }
+
+    const eventsByKey = new Map();
+    for (const event of data.events) {
+      eventsByKey.set(normalizeEventKey(event.eventKey), event);
+    }
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "すべて";
+    eventSelect.appendChild(allOption);
+    for (const event of [...eventsByKey.values()].sort((left, right) => left.genderCode - right.genderCode || left.styleCode - right.styleCode || left.distanceCode - right.distanceCode)) {
+      const option = document.createElement("option");
+      option.value = normalizeEventKey(event.eventKey);
+      option.textContent = event.eventLabel;
+      eventSelect.appendChild(option);
+    }
+
+    function render() {
+      const blockName = blockSelect.value || blocks[0].name;
+      const eventKey = eventSelect.value;
+      const query = searchInput.value.trim().toLowerCase();
+      let rows = buildQualifiers(blockName);
+      if (eventKey) {
+        rows = rows.filter((row) => row.eventKey === eventKey);
+      }
+      if (query) {
+        rows = rows.filter((row) =>
+          [row.name, row.school, row.prefecture, row.eventLabel].some((value) =>
+            String(value || "").toLowerCase().includes(query)
+          )
+        );
+      }
+
+      summary.textContent = `${blockName} / ${eventKey ? eventsByKey.get(eventKey)?.eventLabel : "全種目"} / ${rows.length}件`;
+      body.innerHTML = "";
+      rows.forEach((row, index) => {
+        const tr = document.createElement("tr");
+        const rank = eventKey ? index + 1 : "-";
+        const grade = row.schoolGrade && row.schoolGrade !== "-" ? ` / ${row.schoolGrade}` : "";
+        tr.innerHTML = `
+          <td class="rank">${rank}</td>
+          <td>${row.eventLabel}</td>
+          <td class="time">${row.bestTime}</td>
+          <td>${row.name}<div class="small">${row.isRelay ? "リレー" : ""}</div></td>
+          <td>${row.school || "-"}<div class="small">${grade}</div></td>
+          <td><a href="${row.tournamentUrl}" target="_blank" rel="noreferrer">${row.prefecture}</a></td>
+          <td>${[...row.reasons].map((reason) => `<span class="reason">${reason}</span>`).join("")}</td>
+          <td>${row.standardTime}</td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    blockSelect.addEventListener("change", render);
+    eventSelect.addEventListener("change", render);
+    searchInput.addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>

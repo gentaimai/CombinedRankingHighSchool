@@ -174,6 +174,7 @@ def merge_existing_datasets(datasets):
 
     merged_tournaments = {}
     merged_rows = {}
+    merged_all_rows = {}
     best_meta = max(candidates, key=lambda item: (len(item.get("rows", [])), len(item.get("events", []))))
 
     for dataset in candidates:
@@ -181,16 +182,23 @@ def merge_existing_datasets(datasets):
         rows_by_tournament = defaultdict(list)
         for row in dataset.get("rows", []):
             rows_by_tournament[row["tournamentCode"]].append(row)
+        all_rows_by_tournament = defaultdict(list)
+        for row in dataset.get("allRows", []):
+            all_rows_by_tournament[row["tournamentCode"]].append(row)
 
         for code, tournament in tournament_map.items():
             current = merged_tournaments.get(code)
             current_rows = merged_rows.get(code, [])
+            current_all_rows = merged_all_rows.get(code, [])
             candidate_rows = rows_by_tournament.get(code, [])
+            candidate_all_rows = all_rows_by_tournament.get(code, [])
             current_complete = bool(current and current.get("fetchComplete"))
             candidate_complete = bool(tournament.get("fetchComplete"))
 
             take_candidate = False
             if current is None:
+                take_candidate = True
+            elif candidate_all_rows and len(candidate_all_rows) > len(current_all_rows):
                 take_candidate = True
             elif candidate_complete and not current_complete:
                 take_candidate = True
@@ -202,12 +210,14 @@ def merge_existing_datasets(datasets):
             if take_candidate:
                 merged_tournaments[code] = tournament
                 merged_rows[code] = candidate_rows
+                merged_all_rows[code] = candidate_all_rows
 
     merged = {
         "generatedAt": best_meta.get("generatedAt"),
         "source": best_meta.get("source"),
         "tournaments": list(merged_tournaments.values()),
         "rows": [row for code in sorted(merged_rows) for row in merged_rows[code]],
+        "allRows": [row for code in sorted(merged_all_rows) for row in merged_all_rows[code]],
         "events": best_meta.get("events", []),
     }
     return merged
@@ -294,13 +304,16 @@ def enrich_tournaments(existing_tournaments=None):
     return enriched
 
 
-def should_fetch_tournament(tournament, existing_map, existing_rows_by_tournament):
+def should_fetch_tournament(tournament, existing_map, existing_rows_by_tournament, existing_all_rows_by_tournament):
     cached = existing_map.get(tournament["code"], {})
     cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
+    cached_all_rows = existing_all_rows_by_tournament.get(tournament["code"], [])
     if tournament.get("status") == "競技前":
         return False, "status-pre"
     if tournament.get("status") != "競技終了":
         return False, f"status-{tournament.get('statusRaw') or 'unknown'}"
+    if cached_rows and not cached_all_rows:
+        return True, "ended-missing-all-rows"
     if cached.get("fetchComplete") and cached_rows:
         return False, "already-complete"
     return True, "ended-incomplete"
@@ -484,18 +497,25 @@ def build_dataset(existing_data=None):
     tournaments = enrich_tournaments((existing_data or {}).get("tournaments"))
     existing_tournament_map = {item["code"]: item for item in (existing_data or {}).get("tournaments", [])}
     existing_rows_by_tournament = defaultdict(list)
+    existing_all_rows_by_tournament = defaultdict(list)
     if existing_data:
         for row in existing_data.get("rows", []):
             row["eventKey"] = normalize_event_key(row["eventKey"])
             existing_rows_by_tournament[row["tournamentCode"]].append(row)
+        for row in existing_data.get("allRows", []):
+            row["eventKey"] = normalize_event_key(row["eventKey"])
+            existing_all_rows_by_tournament[row["tournamentCode"]].append(row)
     event_rows = defaultdict(dict)
+    all_rows = []
     tournaments_done = 0
     for tournament in tournaments:
         tournaments_done += 1
         log(f"[{tournaments_done}/{len(TOURNAMENTS)}] {tournament['prefecture']} {tournament['code']}")
         specs = collect_event_specs(tournament["code"])
         tournament_best = {}
+        tournament_all_rows = []
         cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
+        cached_all_rows = existing_all_rows_by_tournament.get(tournament["code"], [])
         for payload in cached_rows:
             dedupe_key = (
                 normalize_event_key(payload["eventKey"]),
@@ -507,6 +527,7 @@ def build_dataset(existing_data=None):
             tournament,
             existing_tournament_map,
             existing_rows_by_tournament,
+            existing_all_rows_by_tournament,
         )
         tournament["fetchReason"] = fetch_reason
         tournament["fetchUpdatedAt"] = current_timestamp_jst()
@@ -586,6 +607,7 @@ def build_dataset(existing_data=None):
                     "resultId": row.get("result_id"),
                     "finaPoint": row.get("fina_point"),
                 }
+                tournament_all_rows.append(dict(payload))
                 current = tournament_best.get(dedupe_key)
                 if current is None or (centis, -(payload["finaPoint"] or 0)) < (
                     current["timeCentis"],
@@ -608,7 +630,12 @@ def build_dataset(existing_data=None):
             f"complete={tournament['fetchComplete']}"
         )
         source_rows = list(tournament_best.values()) or cached_rows
+        source_all_rows = tournament_all_rows if fetch_needed and tournament_all_rows else cached_all_rows
         tournament["resultRowCount"] = len(source_rows)
+        tournament["allResultRowCount"] = len(source_all_rows)
+        for payload in source_all_rows:
+            payload["eventKey"] = normalize_event_key(payload["eventKey"])
+            all_rows.append(payload)
         for payload in source_rows:
             payload["eventKey"] = normalize_event_key(payload["eventKey"])
             global_key = payload["name"] + "|" + payload["school"] + "|" + payload["prefecture"]
@@ -646,12 +673,23 @@ def build_dataset(existing_data=None):
 
     events.sort(key=lambda item: (item["genderCode"], item["styleCode"], item["distanceCode"]))
     flat_rows.sort(key=lambda item: (item["eventLabel"], item["rank"]))
+    all_rows.sort(
+        key=lambda item: (
+            item["eventLabel"],
+            item["prefecture"],
+            item["tournamentCode"],
+            item["divisionName"],
+            item["timeCentis"],
+            item["name"],
+        )
+    )
     return {
         "generatedAt": current_timestamp_jst(),
         "source": "https://result.swim.or.jp/",
         "tournaments": tournaments,
         "events": events,
         "rows": flat_rows,
+        "allRows": all_rows,
         "liveTournamentCount": len({row["tournamentCode"] for row in flat_rows}),
         "statusSummary": {
             "競技前": sum(1 for item in tournaments if item["status"] == "競技前"),
@@ -676,6 +714,7 @@ def main():
     log(f"Wrote {OUTPUT_PATH}")
     log(f"Events: {len(dataset['events'])}")
     log(f"Rows: {len(dataset['rows'])}")
+    log(f"All rows: {len(dataset.get('allRows', []))}")
 
 
 if __name__ == "__main__":
