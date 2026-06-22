@@ -89,17 +89,6 @@
     .rank, .time { font-weight: 800; font-variant-numeric: tabular-nums; }
     .rank { color: var(--accent); text-align: center; }
     .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
-    .reason {
-      display: inline-block;
-      margin: 0 4px 4px 0;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #eef7fb;
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
     a { color: var(--accent); }
     .footer { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 16px; }
     @media (max-width: 900px) {
@@ -115,9 +104,7 @@
       th:nth-child(2), td:nth-child(2) { width: 72px; }
       th:nth-child(4), td:nth-child(4) { width: 74px; }
       th:nth-child(6), td:nth-child(6) { width: 44px; }
-      th:nth-child(7), td:nth-child(7) { width: 72px; }
-      th:nth-child(8), td:nth-child(8) { display: none; }
-      .reason { padding: 3px 6px; font-size: 10px; }
+      th:nth-child(7), td:nth-child(7) { width: 66px; }
       .small { font-size: 10px; }
     }
   </style>
@@ -165,7 +152,6 @@
               <th>名前 / チーム名</th>
               <th>学校</th>
               <th>都道府県</th>
-              <th>通過理由</th>
               <th>標準記録</th>
             </tr>
           </thead>
@@ -176,7 +162,7 @@
 
     <section class="footer">
       <p>標準記録は日本水泳連盟「第94回 日本高等学校選手権水泳競技大会」の標準記録を使用しています。</p>
-      <p>個人種目ではパンパシ・ジュニアパンパシ代表選手を除外しています。リレーはチーム単位で判定しています。</p>
+      <p>氏名横の（パ）はパンパシフィック選手権代表、（ジ）はジュニアパンパシフィック選手権代表を示します。</p>
     </section>
   </div>
 
@@ -218,12 +204,16 @@
       Object.entries(standardTimes).map(([key, value]) => [key, parseTimeToCentis(value)])
     );
 
-    const representativeNames = new Set(
-      (window.SWIM_INTERNATIONAL_REPRESENTATIVES || []).map((item) => normalizeName(item.name))
+    const representativeMarkers = new Map(
+      (window.SWIM_INTERNATIONAL_REPRESENTATIVES || []).map((item) => [
+        normalizeName(item.name),
+        item.marker,
+      ])
     );
 
-    function isRepresentative(row) {
-      return !row.isRelay && representativeNames.has(normalizeName(row.name));
+    function formatName(row) {
+      const marker = representativeMarkers.get(normalizeName(row.name));
+      return marker && !row.isRelay ? `${row.name}（${marker}）` : row.name;
     }
 
     function isTop8Division(row) {
@@ -246,8 +236,7 @@
       const prefectures = new Set(block.prefectures);
       const rows = allRows
         .filter((row) => prefectures.has(row.prefecture))
-        .filter((row) => row.timeCentis != null)
-        .filter((row) => !isRepresentative(row));
+        .filter((row) => row.timeCentis != null);
 
       const qualifiers = new Map();
 
@@ -266,7 +255,6 @@
             bestTime: row.time,
             bestCentis: row.timeCentis,
             standardTime: standardTimes[normalizeEventKey(row.eventKey)] || "-",
-            reasons: new Set(),
           });
         }
         const item = qualifiers.get(key);
@@ -281,7 +269,7 @@
         const eventKey = normalizeEventKey(row.eventKey);
         const standard = standardCentis.get(eventKey);
         if (standard != null && row.timeCentis <= standard) {
-          ensure(row).reasons.add("標準突破");
+          ensure(row);
         }
       }
 
@@ -297,7 +285,7 @@
           .slice()
           .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"))
           .slice(0, 8)
-          .forEach((row) => ensure(row).reasons.add("決勝8位以内"));
+          .forEach((row) => ensure(row));
       }
 
       return [...qualifiers.values()].sort(
@@ -356,10 +344,9 @@
           <td class="rank">${rank}</td>
           <td>${row.eventLabel}</td>
           <td class="time">${row.bestTime}</td>
-          <td>${row.name}<div class="small">${row.isRelay ? "リレー" : ""}</div></td>
+          <td>${formatName(row)}<div class="small">${row.isRelay ? "リレー" : ""}</div></td>
           <td>${row.school || "-"}<div class="small">${grade}</div></td>
           <td><a href="${row.tournamentUrl}" target="_blank" rel="noreferrer">${row.prefecture}</a></td>
-          <td>${[...row.reasons].map((reason) => `<span class="reason">${reason}</span>`).join("")}</td>
           <td>${row.standardTime}</td>
         `;
         body.appendChild(tr);
