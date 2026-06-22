@@ -32,11 +32,46 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Detect data refresh need
+        id: data-refresh
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" != "push" ]]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Data refresh required for scheduled/manual run"
+            exit 0
+          fi
+
+          if [[ ! -f ranking-data.js ]]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Data refresh required because ranking-data.js is missing"
+            exit 0
+          fi
+
+          before="${{ github.event.before }}"
+          if [[ "$before" =~ ^0+$ ]]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Data refresh required for initial push"
+            exit 0
+          fi
+
+          git diff --name-only "$before" "${{ github.sha }}" > changed-files.txt
+          cat changed-files.txt
+
+          if grep -Eq '^(build_rankings\.py|requirements.*|pyproject\.toml|uv\.lock)$' changed-files.txt; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Data refresh required because data generation files changed"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping data refresh; only existing ranking-data.js will be deployed"
+          fi
+
       - name: Refresh ranking data
+        if: steps.data-refresh.outputs.needed == 'true'
         run: python build_rankings.py
 
       - name: Commit refreshed data
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && steps.data-refresh.outputs.needed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
