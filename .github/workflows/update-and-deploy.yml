@@ -77,7 +77,8 @@ jobs:
         run: python build_rankings.py
 
       - name: Commit refreshed data
-        if: github.event_name != 'push' && steps.data-refresh.outputs.needed == 'true'
+        if: steps.data-refresh.outputs.needed == 'true'
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -86,7 +87,11 @@ jobs:
             echo "No generated changes to commit"
             exit 0
           fi
-          git commit -m "chore: refresh ranking data"
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            git commit -m "chore: refresh ranking data [skip ci]"
+          else
+            git commit -m "chore: refresh ranking data"
+          fi
           git push origin HEAD:main
 
       - name: Configure Pages
