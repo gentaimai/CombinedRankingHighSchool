@@ -108,6 +108,48 @@ def normalize_status(raw_status_name):
     return raw_status_name or "不明"
 
 
+def unwrap_api_data(response):
+    data = response.get("data") if isinstance(response, dict) else None
+    return data if isinstance(data, dict) else response
+
+
+def first_present(mapping, keys):
+    for key in keys:
+        value = mapping.get(key)
+        if value not in (None, ""):
+            return value
+    return ""
+
+
+def name_from_value(value):
+    if isinstance(value, dict):
+        return first_present(value, ["short_name", "name", "display_name", "venue_name"])
+    return value or ""
+
+
+def tournament_date_from_detail(detail, fallback):
+    date_text = first_present(detail, ["date", "period", "event_date", "game_date", "held_date"])
+    if date_text:
+        return date_text
+    start_date = first_present(detail, ["start_date", "started_at", "start_at", "from_date", "begin_date", "date_from"])
+    end_date = first_present(detail, ["end_date", "ended_at", "end_at", "to_date", "finish_date", "date_to"])
+    if start_date and end_date and start_date != end_date:
+        return f"{start_date}〜{end_date}"
+    return start_date or end_date or fallback
+
+
+def tournament_venue_from_detail(detail, fallback):
+    value = first_present(detail, ["venue", "place", "pool", "facility"])
+    venue = name_from_value(value)
+    if venue:
+        return venue
+    return first_present(detail, ["venue_name", "place_name", "pool_name", "facility_name"]) or fallback
+
+
+def tournament_name_from_detail(detail, fallback):
+    return first_present(detail, ["name", "game_name", "tournament_name", "title"]) or fallback
+
+
 def is_cached_finished(tournament):
     return tournament.get("statusRaw") in POST_STATUS_NAMES or tournament.get("status") == "競技終了"
 
@@ -305,7 +347,7 @@ def enrich_tournaments(existing_tournaments=None):
         waterway_name = ""
         is_short_course = False
         try:
-            detail = api_get(f"/games/{tournament['code']}")
+            detail = unwrap_api_data(api_get(f"/games/{tournament['code']}"))
             raw_status = (detail.get("game_status") or {}).get("name", "")
             status = normalize_status(raw_status)
             waterway_name = (detail.get("waterway") or {}).get("name", "")
@@ -336,13 +378,36 @@ def enrich_tournaments(existing_tournaments=None):
 def block_tournament_entries():
     entries = []
     for tournament in BLOCK_TOURNAMENTS:
+        name = tournament["name"]
+        date = tournament["date"]
+        venue = tournament["venue"]
+        raw_status = "開催前"
+        status = "競技前"
+        waterway_name = ""
+        is_short_course = False
+        if tournament.get("url"):
+            try:
+                detail = unwrap_api_data(api_get(f"/games/{tournament['code']}"))
+                name = tournament_name_from_detail(detail, name)
+                date = tournament_date_from_detail(detail, date)
+                venue = tournament_venue_from_detail(detail, venue)
+                raw_status = (detail.get("game_status") or {}).get("name", raw_status)
+                status = normalize_status(raw_status)
+                waterway_name = (detail.get("waterway") or {}).get("name", "")
+                is_short_course = is_short_course_name(waterway_name)
+                log(f"  block tournament {tournament['prefecture']} status={status} raw={raw_status}")
+            except Exception:
+                log(f"  block tournament fallback {tournament['prefecture']} {tournament['code']}")
         entries.append(
             {
                 **tournament,
-                "statusRaw": "開催前",
-                "status": "競技前",
-                "waterwayName": "",
-                "isShortCourse": False,
+                "name": name,
+                "date": date,
+                "venue": venue,
+                "statusRaw": raw_status,
+                "status": status,
+                "waterwayName": waterway_name,
+                "isShortCourse": is_short_course,
                 "isBlockTournament": True,
                 "fetchReason": "block-tournament-list-only",
                 "fetchUpdatedAt": current_timestamp_jst(),
