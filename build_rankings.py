@@ -67,6 +67,7 @@ TOURNAMENTS = [
 PRE_STATUS_NAMES = {"開催前", "エントリー済"}
 LIVE_STATUS_NAMES = {"開催中"}
 POST_STATUS_NAMES = {"大会終了", "記録未登録", "記録確定"}
+FINAL_STATUS_NAME = "記録確定"
 RESULT_CLASS_CODES = {0, 3}
 TARGET_STYLE_DISTANCES = {
     1: {2, 3, 4, 5, 6, 7},  # 自由形
@@ -270,6 +271,20 @@ def enrich_tournaments(existing_tournaments=None):
     enriched = []
     for tournament in TOURNAMENTS:
         log(f"[status] {tournament['prefecture']} {tournament['code']}")
+        cached = existing_map.get(tournament["code"])
+        if cached and cached.get("statusRaw") == FINAL_STATUS_NAME:
+            log(f"  cached final status={FINAL_STATUS_NAME}")
+            enriched.append(
+                {
+                    **tournament,
+                    "statusRaw": FINAL_STATUS_NAME,
+                    "status": "競技終了",
+                    "waterwayName": cached.get("waterwayName", ""),
+                    "isShortCourse": cached.get("isShortCourse", False),
+                }
+            )
+            continue
+
         raw_status = ""
         status = ""
         waterway_name = ""
@@ -282,7 +297,6 @@ def enrich_tournaments(existing_tournaments=None):
             is_short_course = is_short_course_name(waterway_name)
             log(f"  status={status} raw={raw_status}")
         except Exception:
-            cached = existing_map.get(tournament["code"])
             if cached:
                 raw_status = cached.get("statusRaw", "")
                 status = cached.get("status", "") or normalize_status(raw_status)
@@ -308,6 +322,8 @@ def should_fetch_tournament(tournament, existing_map, existing_rows_by_tournamen
     cached = existing_map.get(tournament["code"], {})
     cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
     cached_all_rows = existing_all_rows_by_tournament.get(tournament["code"], [])
+    if cached.get("statusRaw") == FINAL_STATUS_NAME and cached_rows and cached_all_rows:
+        return False, "cached-final-confirmed"
     if tournament.get("status") == "競技前":
         return False, "status-pre"
     if tournament.get("status") != "競技終了":
@@ -527,11 +543,11 @@ def build_dataset(existing_data=None):
     for tournament in tournaments:
         tournaments_done += 1
         log(f"[{tournaments_done}/{len(TOURNAMENTS)}] {tournament['prefecture']} {tournament['code']}")
-        specs = collect_event_specs(tournament["code"])
         tournament_best = {}
         tournament_all_rows = []
         cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
         cached_all_rows = existing_all_rows_by_tournament.get(tournament["code"], [])
+        cached_tournament = existing_tournament_map.get(tournament["code"], {})
         for payload in cached_rows:
             dedupe_key = (
                 normalize_event_key(payload["eventKey"]),
@@ -547,22 +563,22 @@ def build_dataset(existing_data=None):
         )
         tournament["fetchReason"] = fetch_reason
         tournament["fetchUpdatedAt"] = current_timestamp_jst()
-        tournament["targetSpecCount"] = len(specs)
-        cached_tournament = existing_tournament_map.get(tournament["code"], {})
+        specs = collect_event_specs(tournament["code"]) if fetch_needed else []
+        tournament["targetSpecCount"] = len(specs) if fetch_needed else cached_tournament.get("targetSpecCount", 0)
         tournament["fetchAttemptedSpecCount"] = cached_tournament.get("fetchAttemptedSpecCount", 0)
         tournament["fetchSucceededSpecCount"] = cached_tournament.get("fetchSucceededSpecCount", 0)
         tournament["fetchFailedSpecCount"] = cached_tournament.get("fetchFailedSpecCount", 0)
         tournament["fetchComplete"] = cached_tournament.get("fetchComplete", False)
 
-        if not specs:
-            log(f"  no specs for {tournament['code']}, using cached rows if available")
-            tournament["fetchComplete"] = bool(cached_rows)
-        elif not fetch_needed:
+        if not fetch_needed:
             log(f"  skip fetch for {tournament['code']} reason={fetch_reason}")
             if tournament["fetchComplete"]:
-                tournament["fetchAttemptedSpecCount"] = len(specs)
-                tournament["fetchSucceededSpecCount"] = len(specs)
+                tournament["fetchAttemptedSpecCount"] = tournament["targetSpecCount"]
+                tournament["fetchSucceededSpecCount"] = tournament["targetSpecCount"]
                 tournament["fetchFailedSpecCount"] = 0
+        elif not specs:
+            log(f"  no specs for {tournament['code']}, using cached rows if available")
+            tournament["fetchComplete"] = bool(cached_rows)
         else:
             tournament["fetchAttemptedSpecCount"] = 0
             tournament["fetchSucceededSpecCount"] = 0
