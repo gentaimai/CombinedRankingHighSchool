@@ -121,7 +121,7 @@
   <div class="wrap">
     <section class="hero">
       <h1>高校総体予選 2026 大会一覧</h1>
-      <p class="subtitle">都道府県ごとの対象大会名と大会ページへのリンク、2026年6月16日時点のステータスを一覧表示しています。</p>
+      <p class="subtitle">都道府県大会とブロック大会の大会名、大会ページへのリンク、ステータスを一覧表示しています。</p>
       <div class="nav">
         <a href="./index.html">トップ</a>
         <a href="./boys.html">男子得点</a>
@@ -188,16 +188,19 @@
         if (status && item.status !== status) return false;
         if (!query) return true;
         return [item.prefecture, item.name, item.venue].some(value =>
-          value.toLowerCase().includes(query)
+          String(value || "").toLowerCase().includes(query)
         );
       });
 
       body.innerHTML = "";
       for (const item of rows) {
         const tr = document.createElement("tr");
+        const tournamentName = item.url
+          ? `<a href="${item.url}" target="_blank" rel="noreferrer">${item.name}${item.isShortCourse ? " [短水路]" : ""}</a>`
+          : `${item.name}${item.isShortCourse ? " [短水路]" : ""}`;
         tr.innerHTML = `
           <td>${item.prefecture}</td>
-          <td><a href="${item.url}" target="_blank" rel="noreferrer">${item.name}${item.isShortCourse ? " [短水路]" : ""}</a></td>
+          <td>${tournamentName}${item.isBlockTournament ? '<div class="small">ブロック大会</div>' : ""}</td>
           <td>${item.date}</td>
           <td>${item.venue}</td>
           <td>

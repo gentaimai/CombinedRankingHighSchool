@@ -15,7 +15,7 @@ API_BASE = "https://result.swim.or.jp/api/v1"
 OUTPUT_PATH = Path(__file__).with_name("ranking-data.js")
 
 TOURNAMENTS = [
-    {"prefecture": "北海道", "code": "0126311", "name": "第79回北海道高等学校選手権水泳競技大会", "date": "2026-07-11〜2026-07-12", "venue": "NOPPOROヤシマ商会スポーツパーク", "url": "https://result.swim.or.jp/tournament/0126311"},
+    {"prefecture": "北海道", "code": "0126311", "name": "第79回北海道高等学校選手権水泳競技大会", "date": "2026-07-11〜2026-07-12", "venue": "NOPPOROヤシマ商会スポーツパーク", "url": "https://result.swim.or.jp/tournament/0126311", "isBlockTournament": True},
     {"prefecture": "青森", "code": "0226311", "name": "第79回青森県高等学校総合体育大会水泳競技大会", "date": "2026-05-23〜2026-05-24", "venue": "新青森県総合運動公園マエダアリーナ50mプール", "url": "https://result.swim.or.jp/tournament/0226311"},
     {"prefecture": "岩手", "code": "0326301", "name": "第78回岩手県高等学校総合体育大会水泳競技大会", "date": "2026-06-12〜2026-06-14", "venue": "盛岡市立総合プール", "url": "https://result.swim.or.jp/tournament/0326301"},
     {"prefecture": "宮城", "code": "0426301", "name": "第75回宮城県高校総合体育大会", "date": "2026-06-12〜2026-06-14", "venue": "宮城県総合プール(国際）", "url": "https://result.swim.or.jp/tournament/0426301"},
@@ -62,6 +62,17 @@ TOURNAMENTS = [
     {"prefecture": "宮崎", "code": "4526301", "name": "第53回宮崎県高等学校総合体育大会水泳競技", "date": "2026-05-30〜2026-05-31", "venue": "パーソルアクアパーク宮崎", "url": "https://result.swim.or.jp/tournament/4526301"},
     {"prefecture": "鹿児島", "code": "4626302", "name": "第78回鹿児島県高等学校水泳（競泳）競技大会", "date": "2026-05-28〜2026-05-29", "venue": "鴨池公園水泳プール", "url": "https://result.swim.or.jp/tournament/4626302"},
     {"prefecture": "沖縄", "code": "4726304", "name": "第74回沖縄県高等学校水泳競技大会", "date": "2026-05-30〜2026-05-31", "venue": "奥武山水泳プール50mプール", "url": "https://result.swim.or.jp/tournament/4726304"},
+]
+
+BLOCK_TOURNAMENTS = [
+    {"prefecture": "東北", "code": "0426711", "name": "東北ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/0426711"},
+    {"prefecture": "関東", "code": "1426309", "name": "関東ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/1426309"},
+    {"prefecture": "北信越", "code": "block-hokushinetsu-2026", "name": "北信越ブロック大会", "date": "2026-07-18〜2026-07-20", "venue": "富山県 富山総合体育センター", "url": ""},
+    {"prefecture": "東海", "code": "2226305", "name": "東海ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/2226305"},
+    {"prefecture": "近畿", "code": "2726302", "name": "近畿ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/2726302"},
+    {"prefecture": "中国", "code": "3326399", "name": "中国ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/3326399"},
+    {"prefecture": "四国", "code": "3826384", "name": "四国ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/3826384"},
+    {"prefecture": "九州", "code": "4326392", "name": "九州ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/4326392"},
 ]
 
 PRE_STATUS_NAMES = {"開催前", "エントリー済"}
@@ -322,6 +333,31 @@ def enrich_tournaments(existing_tournaments=None):
     return enriched
 
 
+def block_tournament_entries():
+    entries = []
+    for tournament in BLOCK_TOURNAMENTS:
+        entries.append(
+            {
+                **tournament,
+                "statusRaw": "開催前",
+                "status": "競技前",
+                "waterwayName": "",
+                "isShortCourse": False,
+                "isBlockTournament": True,
+                "fetchReason": "block-tournament-list-only",
+                "fetchUpdatedAt": current_timestamp_jst(),
+                "targetSpecCount": 0,
+                "fetchAttemptedSpecCount": 0,
+                "fetchSucceededSpecCount": 0,
+                "fetchFailedSpecCount": 0,
+                "fetchComplete": False,
+                "resultRowCount": 0,
+                "allResultRowCount": 0,
+            }
+        )
+    return entries
+
+
 def should_fetch_tournament(tournament, existing_map, existing_rows_by_tournament, existing_all_rows_by_tournament):
     cached = existing_map.get(tournament["code"], {})
     cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
@@ -531,6 +567,7 @@ def fetch_results_for_event(game_code, spec):
 
 def build_dataset(existing_data=None):
     tournaments = enrich_tournaments((existing_data or {}).get("tournaments"))
+    output_tournaments = tournaments + block_tournament_entries()
     existing_tournament_map = {item["code"]: item for item in (existing_data or {}).get("tournaments", [])}
     existing_rows_by_tournament = defaultdict(list)
     existing_all_rows_by_tournament = defaultdict(list)
@@ -723,20 +760,20 @@ def build_dataset(existing_data=None):
     return {
         "generatedAt": current_timestamp_jst(),
         "source": "https://result.swim.or.jp/",
-        "tournaments": tournaments,
+        "tournaments": output_tournaments,
         "events": events,
         "rows": flat_rows,
         "allRows": all_rows,
         "liveTournamentCount": len({row["tournamentCode"] for row in flat_rows}),
         "statusSummary": {
-            "競技前": sum(1 for item in tournaments if item["status"] == "競技前"),
-            "競技中": sum(1 for item in tournaments if item["status"] == "競技中"),
-            "競技終了": sum(1 for item in tournaments if item["status"] == "競技終了"),
+            "競技前": sum(1 for item in output_tournaments if item["status"] == "競技前"),
+            "競技中": sum(1 for item in output_tournaments if item["status"] == "競技中"),
+            "競技終了": sum(1 for item in output_tournaments if item["status"] == "競技終了"),
         },
         "fetchSummary": {
-            "complete": sum(1 for item in tournaments if item.get("fetchComplete")),
-            "incomplete": sum(1 for item in tournaments if item.get("targetSpecCount", 0) > 0 and not item.get("fetchComplete")),
-            "skipped": sum(1 for item in tournaments if item.get("fetchAttemptedSpecCount", 0) == 0),
+            "complete": sum(1 for item in output_tournaments if item.get("fetchComplete")),
+            "incomplete": sum(1 for item in output_tournaments if item.get("targetSpecCount", 0) > 0 and not item.get("fetchComplete")),
+            "skipped": sum(1 for item in output_tournaments if item.get("fetchAttemptedSpecCount", 0) == 0),
         },
     }
 
