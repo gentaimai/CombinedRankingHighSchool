@@ -67,7 +67,6 @@ TOURNAMENTS = [
 PRE_STATUS_NAMES = {"開催前", "エントリー済"}
 LIVE_STATUS_NAMES = {"開催中"}
 POST_STATUS_NAMES = {"大会終了", "記録未登録", "記録確定"}
-FINAL_STATUS_NAME = "記録確定"
 RESULT_CLASS_CODES = {0, 3}
 TARGET_STYLE_DISTANCES = {
     1: {2, 3, 4, 5, 6, 7},  # 自由形
@@ -96,6 +95,10 @@ def normalize_status(raw_status_name):
     if raw_status_name in POST_STATUS_NAMES:
         return "競技終了"
     return raw_status_name or "不明"
+
+
+def is_cached_finished(tournament):
+    return tournament.get("statusRaw") in POST_STATUS_NAMES or tournament.get("status") == "競技終了"
 
 
 def is_short_course_name(waterway_name):
@@ -272,12 +275,13 @@ def enrich_tournaments(existing_tournaments=None):
     for tournament in TOURNAMENTS:
         log(f"[status] {tournament['prefecture']} {tournament['code']}")
         cached = existing_map.get(tournament["code"])
-        if cached and cached.get("statusRaw") == FINAL_STATUS_NAME:
-            log(f"  cached final status={FINAL_STATUS_NAME}")
+        if cached and is_cached_finished(cached):
+            raw_status = cached.get("statusRaw") or "競技終了"
+            log(f"  cached finished status={raw_status}")
             enriched.append(
                 {
                     **tournament,
-                    "statusRaw": FINAL_STATUS_NAME,
+                    "statusRaw": raw_status,
                     "status": "競技終了",
                     "waterwayName": cached.get("waterwayName", ""),
                     "isShortCourse": cached.get("isShortCourse", False),
@@ -322,8 +326,8 @@ def should_fetch_tournament(tournament, existing_map, existing_rows_by_tournamen
     cached = existing_map.get(tournament["code"], {})
     cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
     cached_all_rows = existing_all_rows_by_tournament.get(tournament["code"], [])
-    if cached.get("statusRaw") == FINAL_STATUS_NAME and cached_rows and cached_all_rows:
-        return False, "cached-final-confirmed"
+    if is_cached_finished(cached) and cached_rows and cached_all_rows:
+        return False, "cached-finished"
     if tournament.get("status") == "競技前":
         return False, "status-pre"
     if tournament.get("status") != "競技終了":
