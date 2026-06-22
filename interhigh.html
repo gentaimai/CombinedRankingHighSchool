@@ -82,11 +82,22 @@
       background: #fbfdfe;
       font-weight: 800;
     }
+    .participant-header,
     .participant-row {
       display: grid;
       grid-template-columns: minmax(130px, 0.9fr) 44px 44px minmax(260px, 2.6fr);
       gap: 10px;
       align-items: start;
+    }
+    .participant-header {
+      padding: 8px 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      background: #fcfcfb;
+    }
+    .participant-row {
       padding: 10px 18px;
       border-top: 1px solid var(--line);
     }
@@ -101,14 +112,10 @@
     .event-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px 12px;
     }
-    .event-pill {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 7px 9px;
-      background: #fbfdfe;
-      font-size: 12px;
+    .event-text {
+      font-size: 13px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -122,16 +129,23 @@
       .group-list { border-radius: 12px; }
       .prefecture-title { padding: 12px; font-size: 16px; }
       .school-title { padding: 10px 12px; }
+      .participant-header,
       .participant-row {
         grid-template-columns: minmax(92px, 1fr) 28px 28px minmax(0, 1.8fr);
         gap: 6px;
+      }
+      .participant-header {
+        padding: 7px 12px;
+        font-size: 10px;
+      }
+      .participant-row {
         padding: 9px 12px;
       }
       .participant-name,
       .participant-grade,
       .participant-gender,
-      .event-pill { font-size: 12px; }
-      .event-pill { padding: 5px 7px; }
+      .event-text { font-size: 12px; }
+      .event-list { gap: 3px 8px; }
     }
   </style>
 </head>
@@ -410,7 +424,15 @@
         for (const [school, participants] of schoolGroups.entries()) {
           const schoolSection = document.createElement("section");
           schoolSection.className = "school-group";
-          schoolSection.innerHTML = `<div class="school-title">${school}</div>`;
+          schoolSection.innerHTML = `
+            <div class="school-title">学校名: ${school}</div>
+            <div class="participant-header">
+              <div>氏名</div>
+              <div>学年</div>
+              <div>性別</div>
+              <div>出場種目</div>
+            </div>
+          `;
 
           for (const row of participants) {
             const participant = document.createElement("div");
@@ -420,7 +442,7 @@
               <div class="participant-grade">${gradeNumber(row.schoolGrade)}</div>
               <div class="participant-gender">${row.gender || "-"}</div>
               <div class="event-list">
-                ${row.eventList.map((event) => `<div class="event-pill">${event.label}</div>`).join("")}
+                ${row.eventList.map((event) => `<span class="event-text">${event.label}</span>`).join("")}
               </div>
             `;
             schoolSection.appendChild(participant);
