@@ -62,46 +62,51 @@
       color: var(--ink);
     }
     .summary { margin-top: 14px; color: var(--muted); line-height: 1.7; }
-    .table-wrap {
-      overflow: auto;
-      border-radius: 20px;
+    .group-list {
       border: 1px solid var(--line);
+      border-radius: 20px;
       background: white;
+      overflow: hidden;
     }
-    table { width: 100%; border-collapse: collapse; min-width: 900px; }
-    th, td {
-      padding: 13px 14px;
-      border-bottom: 1px solid var(--line);
-      text-align: left;
-      vertical-align: top;
-      font-size: 14px;
-    }
-    th {
-      position: sticky;
-      top: 0;
-      z-index: 1;
+    .prefecture-group + .prefecture-group { border-top: 2px solid var(--line); }
+    .prefecture-title {
+      padding: 14px 18px;
       background: #f3fafc;
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: 0.05em;
+      color: var(--accent);
+      font-size: 18px;
+      font-weight: 800;
     }
-    tbody tr:hover { background: var(--accent-soft); }
-    .rank, .time { font-weight: 800; font-variant-numeric: tabular-nums; }
-    .rank { color: var(--accent); text-align: center; }
-    .small { color: var(--muted); font-size: 12px; margin-top: 3px; }
-    .events-cell { padding: 8px 10px; }
-    .events-scroll { overflow-x: auto; max-width: 100%; }
-    .event-list {
+    .school-group { border-top: 1px solid var(--line); }
+    .school-title {
+      padding: 12px 18px;
+      background: #fbfdfe;
+      font-weight: 800;
+    }
+    .participant-row {
       display: grid;
-      grid-template-columns: repeat(5, minmax(96px, 1fr));
+      grid-template-columns: minmax(130px, 0.9fr) 44px 44px minmax(260px, 2.6fr);
+      gap: 10px;
+      align-items: start;
+      padding: 10px 18px;
+      border-top: 1px solid var(--line);
+    }
+    .participant-row:hover { background: var(--accent-soft); }
+    .participant-name { font-weight: 800; }
+    .participant-grade,
+    .participant-gender {
+      color: var(--muted);
+      font-weight: 800;
+      text-align: center;
+    }
+    .event-list {
+      display: flex;
+      flex-wrap: wrap;
       gap: 6px;
-      min-width: 520px;
     }
     .event-pill {
-      min-height: 36px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 8px 9px;
+      padding: 7px 9px;
       background: #fbfdfe;
       font-size: 12px;
       font-weight: 700;
@@ -114,21 +119,19 @@
       .hero, .panel { border-radius: 18px; }
       .controls { grid-template-columns: 1fr; }
       .panel { padding: 12px; }
-      .table-wrap { border-radius: 12px; }
-      table { min-width: 0; table-layout: fixed; }
-      th, td { padding: 10px 6px; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
-      th { font-size: 10px; letter-spacing: 0; }
-      th:nth-child(1), td:nth-child(1) { width: 34px; }
-      th:nth-child(2), td:nth-child(2) { width: 23%; }
-      th:nth-child(3), td:nth-child(3) { width: 24%; }
-      th:nth-child(4), td:nth-child(4) { width: 34px; text-align: center; }
-      th:nth-child(5), td:nth-child(5) { width: 34px; text-align: center; }
-      th:nth-child(6), td:nth-child(6) { width: 44px; }
-      th:nth-child(7), td:nth-child(7) { width: auto; }
-      .events-cell { padding: 6px; }
-      .event-list { grid-template-columns: repeat(5, 86px); min-width: 450px; }
-      .event-pill { min-height: 32px; padding: 6px; font-size: 11px; }
-      .small { font-size: 10px; }
+      .group-list { border-radius: 12px; }
+      .prefecture-title { padding: 12px; font-size: 16px; }
+      .school-title { padding: 10px 12px; }
+      .participant-row {
+        grid-template-columns: minmax(92px, 1fr) 28px 28px minmax(0, 1.8fr);
+        gap: 6px;
+        padding: 9px 12px;
+      }
+      .participant-name,
+      .participant-grade,
+      .participant-gender,
+      .event-pill { font-size: 12px; }
+      .event-pill { padding: 5px 7px; }
     }
   </style>
 </head>
@@ -161,22 +164,7 @@
     </section>
 
     <section class="panel">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>名前</th>
-              <th>学校</th>
-              <th>学年</th>
-              <th>性別</th>
-              <th>都道府県</th>
-              <th>出場種目</th>
-            </tr>
-          </thead>
-          <tbody id="qualifier-body"></tbody>
-        </table>
-      </div>
+      <div id="qualifier-body" class="group-list"></div>
     </section>
 
     <section class="footer">
@@ -283,6 +271,10 @@
 
     function genderLabel(row) {
       return row.genderCode === 1 || row.genderName === "男子" ? "男" : "女";
+    }
+
+    function gradeNumber(grade) {
+      return String(grade || "-").replace(/年/g, "") || "-";
     }
 
     function buildQualifyingRows(blockName) {
@@ -400,26 +392,45 @@
 
       summary.textContent = `${blockName} / ${rows.length}件`;
       body.innerHTML = "";
-      rows.forEach((row, index) => {
-        const tr = document.createElement("tr");
-        const events = row.eventList.slice(0, 5);
-        tr.innerHTML = `
-          <td class="rank">${index + 1}</td>
-          <td>${formatName(row)}</td>
-          <td>${row.school || "-"}</td>
-          <td>${row.schoolGrade || "-"}</td>
-          <td>${row.gender || "-"}</td>
-          <td>${row.prefecture}</td>
-          <td class="events-cell">
-            <div class="events-scroll">
+      const prefectureGroups = new Map();
+      for (const row of rows) {
+        const prefecture = row.prefecture || "-";
+        const school = row.school || "-";
+        if (!prefectureGroups.has(prefecture)) prefectureGroups.set(prefecture, new Map());
+        const schoolGroups = prefectureGroups.get(prefecture);
+        if (!schoolGroups.has(school)) schoolGroups.set(school, []);
+        schoolGroups.get(school).push(row);
+      }
+
+      for (const [prefecture, schoolGroups] of prefectureGroups.entries()) {
+        const prefectureSection = document.createElement("section");
+        prefectureSection.className = "prefecture-group";
+        prefectureSection.innerHTML = `<div class="prefecture-title">${prefecture}</div>`;
+
+        for (const [school, participants] of schoolGroups.entries()) {
+          const schoolSection = document.createElement("section");
+          schoolSection.className = "school-group";
+          schoolSection.innerHTML = `<div class="school-title">${school}</div>`;
+
+          for (const row of participants) {
+            const participant = document.createElement("div");
+            participant.className = "participant-row";
+            participant.innerHTML = `
+              <div class="participant-name">${formatName(row)}</div>
+              <div class="participant-grade">${gradeNumber(row.schoolGrade)}</div>
+              <div class="participant-gender">${row.gender || "-"}</div>
               <div class="event-list">
-                ${Array.from({ length: 5 }, (_, eventIndex) => `<div class="event-pill">${events[eventIndex]?.label || ""}</div>`).join("")}
+                ${row.eventList.map((event) => `<div class="event-pill">${event.label}</div>`).join("")}
               </div>
-            </div>
-          </td>
-        `;
-        body.appendChild(tr);
-      });
+            `;
+            schoolSection.appendChild(participant);
+          }
+
+          prefectureSection.appendChild(schoolSection);
+        }
+
+        body.appendChild(prefectureSection);
+      }
     }
 
     blockSelect.addEventListener("change", render);
