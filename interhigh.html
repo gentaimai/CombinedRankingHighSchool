@@ -225,6 +225,10 @@
       return String(name || "").replace(/\s+/g, "");
     }
 
+    function normalizeSchoolNameForTeam(school) {
+      return String(school || "").trim().replace(/(?:高校|高)$/, "");
+    }
+
     function parseTimeToCentis(value) {
       if (!value || value === "-----") return null;
       const parts = value.split(":");
@@ -366,10 +370,11 @@
 
       function ensureParticipant(name, school, grade, gender, prefecture) {
         const key = normalizeName(name);
+        const normalizedSchool = normalizeSchoolNameForTeam(school);
         if (!participants.has(key)) {
           participants.set(key, {
             name,
-            school,
+            school: normalizedSchool,
             schoolGrade: grade || "-",
             gender,
             prefecture,
@@ -437,7 +442,7 @@
       const prefectureGroups = new Map();
       for (const row of rows) {
         const prefecture = row.prefecture || "-";
-        const school = row.school || "-";
+        const school = normalizeSchoolNameForTeam(row.school) || "-";
         if (!prefectureGroups.has(prefecture)) prefectureGroups.set(prefecture, new Map());
         const schoolGroups = prefectureGroups.get(prefecture);
         if (!schoolGroups.has(school)) schoolGroups.set(school, []);
