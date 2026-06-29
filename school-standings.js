@@ -77,17 +77,22 @@ function formatPoints(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+function normalizeSchoolNameForTeam(school) {
+  return String(school || "").trim().replace(/(?:高校|高)$/, "");
+}
+
 function schoolKey(row) {
-  return [row.school, row.prefecture || ""].join("|");
+  return [normalizeSchoolNameForTeam(row.school), row.prefecture || ""].join("|");
 }
 
 function normalizeSchoolLabel(rows) {
   const bySchool = new Map();
   for (const row of rows) {
-    if (!bySchool.has(row.school)) {
-      bySchool.set(row.school, new Set());
+    const school = normalizeSchoolNameForTeam(row.school);
+    if (!bySchool.has(school)) {
+      bySchool.set(school, new Set());
     }
-    bySchool.get(row.school).add(row.prefecture);
+    bySchool.get(school).add(row.prefecture);
   }
   const labelMap = new Map();
   for (const [school, prefectures] of bySchool.entries()) {
@@ -147,10 +152,11 @@ function buildStandings(genderKey, blockName = "") {
       for (const row of tieGroup) {
         const key = schoolKey(row);
         if (!schools.has(key)) {
+          const school = normalizeSchoolNameForTeam(row.school);
           schools.set(key, {
-            school: row.school,
+            school,
             prefecture: row.prefecture,
-            displaySchool: schoolLabels.get(key) || row.school,
+            displaySchool: schoolLabels.get(key) || school,
             totalPoints: 0,
             eventPoints: {},
           });
