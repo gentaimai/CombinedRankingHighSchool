@@ -48,7 +48,7 @@ TOURNAMENTS = [
     {"prefecture": "鳥取", "code": "3126301", "name": "第61回鳥取県高等学校総合体育大会　水泳競技（競泳）", "date": "2026-06-13〜2026-06-14", "venue": "鳥取県営東山水泳場屋外50m", "url": "https://result.swim.or.jp/tournament/3126301"},
     {"prefecture": "島根", "code": "3226302", "name": "第64回島根県高等学校総合体育大会　2026年度島根県高等学校選手権水泳競技大会　第74回中国地域高等学校選手権水泳競技大会島根県予選会", "date": "2026-05-30", "venue": "島根県立水泳プール", "url": "https://result.swim.or.jp/tournament/3226302"},
     {"prefecture": "岡山", "code": "3326302", "name": "第65回岡山県高等学校総合体育大会", "date": "2026-06-13〜2026-06-14", "venue": "児島地区公園水泳場", "url": "https://result.swim.or.jp/tournament/3326302"},
-    {"prefecture": "広島", "code": "3426393", "name": "第79回広島県高等学校総合体育大会水泳競技の部", "date": "2026-06-06〜2026-06-07", "venue": "広島市総合屋内プール", "url": "https://result.swim.or.jp/tournament/3426393"},
+    {"prefecture": "広島", "code": "3426393", "name": "令和８年度 広島県高等学校選手権水泳競技大会", "date": "2026-06-27〜2026-06-28", "venue": "緑町公園屋内競技場プール", "url": "https://result.swim.or.jp/tournament/3426393"},
     {"prefecture": "山口", "code": "3526302", "name": "第74回中国高等学校選手権水泳競技大会山口県予選会", "date": "2026-06-13〜2026-06-14", "venue": "ＴＯＫＫＩアクアアリーナ山口", "url": "https://result.swim.or.jp/tournament/3526302"},
     {"prefecture": "香川", "code": "3626301", "name": "第66回 香川県高等学校総合体育大会水泳競技", "date": "2026-06-13〜2026-06-14", "venue": "香川県立総合水泳プール", "url": "https://result.swim.or.jp/tournament/3626301"},
     {"prefecture": "徳島", "code": "3726301", "name": "第66回徳島県高等学校体育大会水泳競技大会兼四国高校予選", "date": "2026-06-14", "venue": "むつみスイミング", "url": "https://result.swim.or.jp/tournament/3726301"},
@@ -348,6 +348,12 @@ def enrich_tournaments(existing_tournaments=None):
         is_short_course = False
         try:
             detail = unwrap_api_data(api_get(f"/games/{tournament['code']}"))
+            tournament = {
+                **tournament,
+                "name": tournament_name_from_detail(detail, tournament["name"]),
+                "date": tournament_date_from_detail(detail, tournament["date"]),
+                "venue": tournament_venue_from_detail(detail, tournament["venue"]),
+            }
             raw_status = (detail.get("game_status") or {}).get("name", "")
             status = normalize_status(raw_status)
             waterway_name = (detail.get("waterway") or {}).get("name", "")
