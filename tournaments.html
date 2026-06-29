@@ -168,9 +168,8 @@
     </section>
   </div>
 
-  <script src="./ranking-data.js"></script>
   <script>
-    const data = window.SWIM_RANKING_DATA;
+    let data = null;
     const body = document.getElementById("tournament-body");
     const searchInput = document.getElementById("search-input");
     const statusFilter = document.getElementById("status-filter");
@@ -182,6 +181,11 @@
     }
 
     function render() {
+      if (!data) {
+        body.innerHTML = '<tr><td colspan="5">読み込み中</td></tr>';
+        return;
+      }
+
       const query = searchInput.value.trim().toLowerCase();
       const status = statusFilter.value;
       const rows = data.tournaments.filter(item => {
@@ -212,9 +216,23 @@
       }
     }
 
+    function loadRankingData() {
+      const script = document.createElement("script");
+      script.src = `./ranking-data.js?v=${Date.now()}`;
+      script.onload = () => {
+        data = window.SWIM_RANKING_DATA;
+        render();
+      };
+      script.onerror = () => {
+        body.innerHTML = '<tr><td colspan="5">データを読み込めませんでした</td></tr>';
+      };
+      document.head.appendChild(script);
+    }
+
     searchInput.addEventListener("input", render);
     statusFilter.addEventListener("change", render);
     render();
+    loadRankingData();
   </script>
 </body>
 </html>
