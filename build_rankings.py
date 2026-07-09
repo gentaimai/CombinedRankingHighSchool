@@ -158,6 +158,11 @@ def is_short_course_name(waterway_name):
     return waterway_name == "短水路"
 
 
+def is_target_result_class(class_meta):
+    class_name = class_meta.get("name", "")
+    return class_meta.get("code") in RESULT_CLASS_CODES or "高校" in class_name
+
+
 def is_target_event(gender_code, style_code, distance_code):
     allowed_distances = TARGET_STYLE_DISTANCES.get(style_code)
     if not allowed_distances or distance_code not in allowed_distances:
@@ -557,7 +562,7 @@ def collect_event_specs(game_code):
                         continue
                     for class_info in held_distance.get("classes", []):
                         class_meta = class_info["class"]
-                        if class_meta["code"] not in RESULT_CLASS_CODES:
+                        if not is_target_result_class(class_meta):
                             continue
                         for division in class_info.get("race_divisions", []):
                             division_meta = division["division"]
