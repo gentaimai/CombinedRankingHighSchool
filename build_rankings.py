@@ -67,7 +67,7 @@ TOURNAMENTS = [
 BLOCK_TOURNAMENTS = [
     {"prefecture": "東北", "code": "0426711", "name": "東北ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/0426711"},
     {"prefecture": "関東", "code": "1426309", "name": "関東ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/1426309"},
-    {"prefecture": "北信越", "code": "block-hokushinetsu-2026", "name": "北信越ブロック大会", "date": "2026-07-18〜2026-07-20", "venue": "富山県 富山総合体育センター", "url": ""},
+    {"prefecture": "北信越", "code": "1826303", "name": "（★北信越）第59回北信越高等学校選手権水泳競技大会 兼 第94回日本高等学校選手権水泳競技大会予選会", "date": "2026-07-18〜2026-07-20", "venue": "富山県総合体育センタープール", "url": "https://result.swim.or.jp/tournament/1826303"},
     {"prefecture": "東海", "code": "2226305", "name": "東海ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/2226305"},
     {"prefecture": "近畿", "code": "2726302", "name": "近畿ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/2726302"},
     {"prefecture": "中国", "code": "3326399", "name": "中国ブロック大会", "date": "未定", "venue": "未定", "url": "https://result.swim.or.jp/tournament/3326399"},
