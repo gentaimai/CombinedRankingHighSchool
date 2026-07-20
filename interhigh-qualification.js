@@ -111,9 +111,13 @@
     return data.allRows && data.allRows.length ? data.allRows : data.rows || [];
   }
 
+  function longCourseRows(data) {
+    return allResultRows(data).filter((row) => !row.isShortCourse);
+  }
+
   function blockResultRows(data) {
     const blockCodes = blockTournamentCodes(data);
-    return allResultRows(data).filter((row) => blockCodes.has(row.tournamentCode) && row.timeCentis != null);
+    return longCourseRows(data).filter((row) => blockCodes.has(row.tournamentCode) && row.timeCentis != null);
   }
 
   function interhighQualifyingKeys(data) {
@@ -146,7 +150,7 @@
     const normalizedEventKey = normalizeEventKey(eventKey);
     const qualifyingKeys = interhighQualifyingKeys(data);
     const bestRows = new Map();
-    for (const row of allResultRows(data)) {
+    for (const row of longCourseRows(data)) {
       if (row.timeCentis == null) continue;
       if (normalizedEventKey && normalizeEventKey(row.eventKey) !== normalizedEventKey) continue;
       if (!row.isRelay && isInternationalRepresentative(row)) continue;
@@ -248,6 +252,7 @@
     blockForPrefecture,
     rowSchoolPrefecture,
     blockTournamentCodes,
+    longCourseRows,
     isInternationalRepresentative,
     isStandardDivision,
     isPodiumDivision,
