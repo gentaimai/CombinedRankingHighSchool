@@ -503,6 +503,18 @@ def school_name(swimmers):
     return ""
 
 
+def school_prefecture_name(swimmers, fallback):
+    if "entry_group" in swimmers:
+        member_group = swimmers["entry_group"].get("member_group") or {}
+        return member_group.get("name") or fallback
+    team_members = swimmers.get("team_members") or []
+    if team_members:
+        entry_group = team_members[0].get("entry_group") or {}
+        member_group = entry_group.get("member_group") or {}
+        return member_group.get("name") or fallback
+    return fallback
+
+
 def school_grade_label(swimmers):
     school_class = swimmers.get("school_class")
     if school_class and school_class.get("school_grade"):
@@ -643,7 +655,9 @@ def fetch_results_for_event(game_code, spec):
 
 def build_dataset(existing_data=None):
     tournaments = enrich_tournaments((existing_data or {}).get("tournaments"))
-    output_tournaments = tournaments + block_tournament_entries()
+    block_tournaments = block_tournament_entries()
+    output_tournaments = tournaments + block_tournaments
+    fetch_tournaments = output_tournaments
     existing_tournament_map = {item["code"]: item for item in (existing_data or {}).get("tournaments", [])}
     existing_rows_by_tournament = defaultdict(list)
     existing_all_rows_by_tournament = defaultdict(list)
@@ -657,9 +671,9 @@ def build_dataset(existing_data=None):
     event_rows = defaultdict(dict)
     all_rows = []
     tournaments_done = 0
-    for tournament in tournaments:
+    for tournament in fetch_tournaments:
         tournaments_done += 1
-        log(f"[{tournaments_done}/{len(TOURNAMENTS)}] {tournament['prefecture']} {tournament['code']}")
+        log(f"[{tournaments_done}/{len(fetch_tournaments)}] {tournament['prefecture']} {tournament['code']}")
         tournament_best = {}
         tournament_all_rows = []
         cached_rows = existing_rows_by_tournament.get(tournament["code"], [])
@@ -742,6 +756,7 @@ def build_dataset(existing_data=None):
                     "timeCentis": centis,
                     "name": competitor_name(swimmers),
                     "school": school_name(swimmers),
+                    "schoolPrefecture": school_prefecture_name(swimmers, tournament["prefecture"]),
                     "schoolGrade": school_grade_label(swimmers),
                     "relayMembers": relay_members_label(swimmers),
                     "relayMemberDetails": relay_member_details(swimmers),

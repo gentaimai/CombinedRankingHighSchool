@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>インターハイ予選 出場者 2026</title>
+  <title>インハイ出場者 2026</title>
   <style>
     :root {
       --bg: #edf2f0;
@@ -169,8 +169,8 @@
 <body>
   <div class="wrap">
     <section class="hero">
-      <h1>インターハイ予選 出場者 2026</h1>
-      <p class="subtitle">都道府県大会の予選・決勝・タイム決勝を対象に、標準記録突破または決勝/タイム決勝8位以内でブロック予選出場対象となる選手を表示します。</p>
+      <h1>インハイ出場者 2026</h1>
+      <p class="subtitle">インハイを選択すると、ブロック大会で本戦出場条件を満たした選手・チームを表示します。各ブロックを選択すると、都道府県大会からブロック大会への出場対象者を表示します。</p>
       <div class="nav">
         <a href="./index.html">トップ</a>
         <a href="./boys.html">男子得点</a>
@@ -199,7 +199,8 @@
     </section>
 
     <section class="footer">
-      <p>標準記録は日本水泳連盟「第94回 日本高等学校選手権水泳競技大会」の標準記録を使用しています。</p>
+      <p>インハイ本戦の標準記録判定は、ブロック大会の予選・決勝・タイム決勝・スイムオフを対象にし、B決勝は除外しています。決勝・A決勝・タイム決勝の3位以内は標準記録未突破でも本戦出場対象です。</p>
+      <p>各ブロック表示では、都道府県大会からブロック大会への出場対象者を表示します。</p>
       <p>氏名横の（パ）はパンパシフィック選手権代表、（ジ）はジュニアパンパシフィック選手権代表を示します。</p>
     </section>
   </div>
@@ -207,6 +208,7 @@
   <script src="./ranking-data.js"></script>
   <script src="./international-representatives.js"></script>
   <script src="./interhigh-standards.js"></script>
+  <script src="./interhigh-qualification.js"></script>
   <script>
     const data = window.SWIM_RANKING_DATA;
     const allRows = data.allRows && data.allRows.length ? data.allRows : data.rows;
@@ -216,6 +218,7 @@
     const searchInput = document.getElementById("search-input");
     const summary = document.getElementById("summary");
     const body = document.getElementById("qualifier-body");
+    const interhigh = window.SWIM_INTERHIGH;
 
     function normalizeEventKey(eventKey) {
       return eventKey.split("|").slice(0, 3).join("|");
@@ -418,6 +421,11 @@
         );
     }
 
+    const interhighOption = document.createElement("option");
+    interhighOption.value = interhigh.INTERHIGH_MODE;
+    interhighOption.textContent = "インハイ";
+    blockSelect.appendChild(interhighOption);
+
     for (const block of blocks) {
       const option = document.createElement("option");
       option.value = block.name;
@@ -426,9 +434,18 @@
     }
 
     function render() {
-      const blockName = blockSelect.value || blocks[0].name;
+      const blockName = blockSelect.value || interhigh.INTERHIGH_MODE;
       const query = searchInput.value.trim().toLowerCase();
-      let rows = buildParticipants(blockName);
+      const isInterhighMode = blockName === interhigh.INTERHIGH_MODE;
+      let rows = isInterhighMode ? interhigh.buildInterhighParticipants(data) : buildParticipants(blockName);
+      rows = rows.slice().sort(
+        (left, right) =>
+          left.prefecture.localeCompare(right.prefecture, "ja") ||
+          left.school.localeCompare(right.school, "ja") ||
+          genderOrder(left.gender) - genderOrder(right.gender) ||
+          gradeValue(right.schoolGrade) - gradeValue(left.schoolGrade) ||
+          left.name.localeCompare(right.name, "ja")
+      );
       if (query) {
         rows = rows.filter((row) =>
           [row.name, row.school, row.prefecture, ...row.eventList.map((event) => event.label)].some((value) =>
@@ -437,7 +454,7 @@
         );
       }
 
-      summary.textContent = `${blockName} / ${rows.length}件`;
+      summary.textContent = `${isInterhighMode ? "インハイ" : blockName} / ${rows.length}件`;
       body.innerHTML = "";
       const prefectureGroups = new Map();
       for (const row of rows) {

@@ -82,7 +82,8 @@ function normalizeSchoolNameForTeam(school) {
 }
 
 function schoolKey(row) {
-  return [normalizeSchoolNameForTeam(row.school), row.prefecture || ""].join("|");
+  const prefecture = row.schoolPrefecture || row.prefecture || "";
+  return [normalizeSchoolNameForTeam(row.school), prefecture].join("|");
 }
 
 function normalizeSchoolLabel(rows) {
@@ -92,7 +93,7 @@ function normalizeSchoolLabel(rows) {
     if (!bySchool.has(school)) {
       bySchool.set(school, new Set());
     }
-    bySchool.get(school).add(row.prefecture);
+    bySchool.get(school).add(row.schoolPrefecture || row.prefecture);
   }
   const labelMap = new Map();
   for (const [school, prefectures] of bySchool.entries()) {
@@ -113,6 +114,7 @@ function buildStandings(genderKey, blockName = "") {
   const config = EVENT_CONFIG[genderKey];
   const allowedEventKeys = new Set(config.events.map(([key]) => key));
   const prefectures = blockPrefectures(blockName);
+  const isInterhighMode = !blockName;
   const genderRows = SWIM_DATA.rows.filter(
     (row) =>
       row.genderCode === config.code &&
@@ -120,15 +122,27 @@ function buildStandings(genderKey, blockName = "") {
       row.school &&
       (!blockName || prefectures.has(row.prefecture))
   );
-  const schoolLabels = normalizeSchoolLabel(genderRows);
+  const interhighRowsByEvent = new Map();
+  if (isInterhighMode) {
+    for (const [eventKey] of config.events) {
+      interhighRowsByEvent.set(
+        eventKey,
+        window.SWIM_INTERHIGH.bestInterhighRows(SWIM_DATA, eventKey).filter((row) => row.genderCode === config.code)
+      );
+    }
+  }
+  const labelRows = isInterhighMode ? [...interhighRowsByEvent.values()].flat() : genderRows;
+  const schoolLabels = normalizeSchoolLabel(labelRows);
   const schools = new Map();
 
   for (const [eventKey] of config.events) {
-    const eventRows = genderRows
-      .filter((row) => normalizeEventKey(row.eventKey) === eventKey)
-      .slice()
-      .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"));
-    const scoringRows = blockName || eventRows[0]?.isRelay
+    const eventRows = isInterhighMode
+      ? interhighRowsByEvent.get(eventKey)
+      : genderRows
+        .filter((row) => normalizeEventKey(row.eventKey) === eventKey)
+        .slice()
+        .sort((left, right) => left.timeCentis - right.timeCentis || left.name.localeCompare(right.name, "ja"));
+    const scoringRows = isInterhighMode || blockName || eventRows[0]?.isRelay
       ? eventRows
       : eventRows.filter((row) => !isInternationalRepresentative(row));
 
@@ -155,7 +169,7 @@ function buildStandings(genderKey, blockName = "") {
           const school = normalizeSchoolNameForTeam(row.school);
           schools.set(key, {
             school,
-            prefecture: row.prefecture,
+            prefecture: row.schoolPrefecture || row.prefecture,
             displaySchool: schoolLabels.get(key) || school,
             totalPoints: 0,
             eventPoints: {},
@@ -203,7 +217,7 @@ function renderStandingsPage() {
   pageTitle.textContent = config.label;
   pageSubtitle.textContent = blockName
     ? `${blockName}の公開済み詳細結果から学校別得点を集計した一覧です。ブロック表示では国際大会代表選手も個人種目の得点対象に含めています。リレー種目は順位通り、その倍点で計算しています。`
-    : "全国の公開済み詳細結果から学校別得点を集計した一覧です。国際大会代表選手は個人種目の得点対象から除外し、下位選手を繰り上げて計算しています。リレー種目は順位通り、その倍点で計算しています。";
+    : "インハイ本戦出場者の最速記録から学校別得点を集計した一覧です。国際大会代表選手は個人種目の対象から除外し、リレー種目は順位通り、その倍点で計算しています。";
 
   tableHead.innerHTML =
     "<tr><th>順位</th><th>学校</th><th>総合得点</th>" +

@@ -200,7 +200,7 @@
         <a href="./index.html">トップ</a>
         <a href="./boys.html">男子得点</a>
         <a href="./girls.html">女子得点</a>
-        <a href="./interhigh.html">ブロック予選</a>
+        <a href="./interhigh.html">インハイ出場者</a>
         <a href="./tournaments.html">大会一覧へ</a>
       </div>
     </section>
@@ -216,9 +216,9 @@
           <input id="search-input" type="search" placeholder="例: 佐藤 / 西京 / 金沢">
         </div>
         <div>
-          <label for="block-select">ブロック</label>
+          <label for="block-select">表示範囲</label>
           <select id="block-select">
-            <option value="">すべて</option>
+            <option value="__interhigh__">全国</option>
           </select>
         </div>
         <div>
@@ -257,7 +257,7 @@
     <section class="footer">
       <p>出典: <a href="https://result.swim.or.jp/">result.swim.or.jp</a> の公開結果。</p>
       <p>氏名横の（パ）はパンパシフィック選手権代表、（ジ）はジュニアパンパシフィック選手権代表を示します。</p>
-      <p>赤線は決勝進出ライン、青線はB決勝進出ラインです。全国表示の個人種目では国際大会代表選手を除外してライン位置を計算し、ブロック表示では代表選手も含めて計算しています。</p>
+      <p>表示範囲の全国は、インハイ本戦出場者のみを対象に、都道府県大会とブロック大会を通じた最速記録を表示します。赤線は決勝進出ライン、青線はB決勝進出ラインです。</p>
       <p>このページは、種目詳細まで公開されている大会だけを結合しています。未開催大会や、結果未登録の大会は自動的に空になります。</p>
       <p>注記: 高知大会はサイト上の大会名に 2025年表記が含まれますが、開催日データは 2026-06-13〜2026-06-14 を採用しています。</p>
     </section>
@@ -266,6 +266,7 @@
   <script src="./ranking-data.js"></script>
   <script src="./international-representatives.js"></script>
   <script src="./interhigh-standards.js"></script>
+  <script src="./interhigh-qualification.js"></script>
   <script>
     const data = window.SWIM_RANKING_DATA;
     const allRows = data.allRows && data.allRows.length ? data.allRows : data.rows;
@@ -277,6 +278,7 @@
     const podiumLine = document.getElementById("podium-line");
     const finalLine = document.getElementById("final-line");
     const bFinalLine = document.getElementById("b-final-line");
+    const interhigh = window.SWIM_INTERHIGH;
 
     function normalizeEventKey(eventKey) {
       return eventKey.split("|").slice(0, 3).join("|");
@@ -434,17 +436,20 @@
       const query = searchInput.value.trim().toLowerCase();
       const blockName = blockSelect.value;
       const prefecture = prefectureSelect.value;
+      const isInterhighMode = blockName === interhigh.INTERHIGH_MODE;
       const blockSet = blockPrefectures(blockName);
-      const qualifyingKeys = qualifyingKeysForBlock(blockName);
-      let eventRows = data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
+      const qualifyingKeys = isInterhighMode ? null : qualifyingKeysForBlock(blockName);
+      let eventRows = isInterhighMode
+        ? interhigh.bestInterhighRows(data, eventKey)
+        : data.rows.filter(item => normalizeEventKey(item.eventKey) === eventKey);
       if (blockName) {
-        eventRows = eventRows.filter(item => blockSet.has(item.prefecture));
+        eventRows = isInterhighMode ? eventRows : eventRows.filter(item => blockSet.has(item.prefecture));
       }
-      const includeRepresentatives = Boolean(blockName);
+      const includeRepresentatives = Boolean(blockName) && !isInterhighMode;
       const cutoffIds = cutoffRowIds(eventRows, includeRepresentatives);
       const scoringRows = scoringRowsForEvent(eventRows, includeRepresentatives);
       let rows = eventRows;
-      if (qualifyingKeys) {
+      if (qualifyingKeys && !isInterhighMode) {
         rows = rows.filter(item => qualifyingKeys.has(qualifierKey(item)));
       }
       if (prefecture) {
